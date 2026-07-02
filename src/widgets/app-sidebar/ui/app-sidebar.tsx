@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { CreateHabitDialog } from "@/features/create-habit"
 import { ThemeToggle } from "@/features/theme-toggle"
 import { NavMain } from "./nav-main"
 import { NavProjects } from "./nav-projects"
@@ -28,6 +29,7 @@ import {
   HeartPulseIcon,
   DumbbellIcon,
   BookOpenIcon,
+  TrophyIcon,
 } from "lucide-react"
 
 const data = {
@@ -75,6 +77,15 @@ const data = {
       ],
     },
     {
+      title: "Достижения",
+      url: "#",
+      icon: <TrophyIcon />,
+      items: [
+        { title: "Полученные", url: "#" },
+        { title: "В процессе", url: "#" },
+      ],
+    },
+    {
       title: "Настройки",
       url: "#",
       icon: <Settings2Icon />,
@@ -115,14 +126,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupContent className="flex flex-col gap-2">
             <SidebarMenu>
               <SidebarMenuItem>
-                {/* ponytail: noop until create-habit feature exists; wire onClick then */}
-                <SidebarMenuButton
-                  tooltip="Создать привычку"
-                  className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
-                >
-                  <PlusCircleIcon />
-                  <span>Создать привычку</span>
-                </SidebarMenuButton>
+                <CreateHabitDialog
+                  trigger={
+                    <SidebarMenuButton className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground">
+                      <PlusCircleIcon />
+                      <span>Создать привычку</span>
+                    </SidebarMenuButton>
+                  }
+                />
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
