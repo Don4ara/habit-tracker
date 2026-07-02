@@ -1,6 +1,15 @@
 import { HomePage } from "@/pages/home"
-import "./styles/App.css"
+import { AppSidebar } from "@/widgets/app-sidebar"
+import { SidebarInset } from "@/shared/ui/sidebar"
+import { IndexProvider } from "./providers"
 
 export function App() {
-  return <HomePage />
+  return (
+    <IndexProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <HomePage />
+      </SidebarInset>
+    </IndexProvider>
+  )
 }
