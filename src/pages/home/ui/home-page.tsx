@@ -1,13 +1,20 @@
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "@/shared/ui/breadcrumb"
 import { Separator } from "@/shared/ui/separator"
 import { SidebarTrigger } from "@/shared/ui/sidebar"
+import { HabitsBoard } from "@/widgets/habits-board"
+
+const GREETING = (() => {
+  const h = new Date().getHours()
+  if (h < 6) return "Доброй ночи"
+  if (h < 12) return "Доброе утро"
+  if (h < 18) return "Добрый день"
+  return "Добрый вечер"
+})()
 
 export function HomePage() {
   return (
@@ -17,23 +24,22 @@ export function HomePage() {
         <Separator orientation="vertical" className="mr-2 h-4" />
         <Breadcrumb>
           <BreadcrumbList>
-            <BreadcrumbItem className="hidden md:block">
-              <BreadcrumbLink href="#">Трекер привычек</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>Дашборд</BreadcrumbPage>
+              <BreadcrumbPage>Главная</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
       </header>
-      <div className="flex flex-1 flex-col gap-4 p-4">
-        <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-          <div className="bg-muted/50 aspect-video rounded-xl" />
-          <div className="bg-muted/50 aspect-video rounded-xl" />
-          <div className="bg-muted/50 aspect-video rounded-xl" />
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-4 md:p-6">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            {GREETING}
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Отметьте привычки, выполненные сегодня.
+          </p>
         </div>
-        <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min" />
+        <HabitsBoard />
       </div>
     </>
   )

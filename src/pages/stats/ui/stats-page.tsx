@@ -1,0 +1,169 @@
+import { BarChart3, CheckCircle2, Flame, Target } from "lucide-react"
+
+import {
+  useHabits,
+  useCompletions,
+  getStreak,
+  completionRate,
+  habitRate,
+  totalCompletions,
+  dailyCounts,
+} from "@/entities/habit"
+import { PageBody, PageHeader } from "@/widgets/page-header"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/shared/ui/empty"
+
+function StatCard({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: React.ReactNode
+  hint?: string
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border p-4">
+      <div className="text-muted-foreground flex items-center gap-2 text-sm">
+        {icon}
+        {label}
+      </div>
+      <div className="font-heading text-3xl font-semibold tracking-tight tabular-nums">
+        {value}
+      </div>
+      {hint && <div className="text-muted-foreground text-xs">{hint}</div>}
+    </div>
+  )
+}
+
+export function StatsPage() {
+  const habits = useHabits()
+  const completions = useCompletions()
+
+  const rate30 = completionRate(habits, completions, 30)
+  const total = totalCompletions(completions)
+  const bestStreak = habits.reduce((m, h) => Math.max(m, getStreak(h)), 0)
+  const counts = dailyCounts(completions, 14)
+  const maxCount = Math.max(1, ...counts.map((c) => c.count))
+
+  return (
+    <>
+      <PageHeader title="Статистика" />
+      <PageBody>
+        {habits.length === 0 ? (
+          <Empty className="min-h-[60vh]">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <BarChart3 />
+              </EmptyMedia>
+              <EmptyTitle>Пока нет данных</EmptyTitle>
+              <EmptyDescription>
+                Создайте привычки и отмечайте их — статистика появится здесь.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                icon={<Target className="size-4" />}
+                label="Выполнение"
+                value={`${Math.round(rate30 * 100)}%`}
+                hint="за 30 дней"
+              />
+              <StatCard
+                icon={<CheckCircle2 className="size-4" />}
+                label="Всего отметок"
+                value={total}
+                hint="за всё время"
+              />
+              <StatCard
+                icon={<Flame className="size-4" />}
+                label="Лучшая серия"
+                value={bestStreak}
+                hint="дней подряд"
+              />
+              <StatCard
+                icon={<BarChart3 className="size-4" />}
+                label="Привычек"
+                value={habits.length}
+                hint="активных"
+              />
+            </div>
+
+            {/* Активность за 14 дней */}
+            <div className="flex flex-col gap-3 rounded-xl border p-4">
+              <h2 className="font-heading text-sm font-medium tracking-tight">
+                Активность за 14 дней
+              </h2>
+              <div className="flex h-32 items-end gap-1.5">
+                {counts.map((c) => (
+                  <div
+                    key={c.key}
+                    className="flex flex-1 flex-col items-center gap-1"
+                    title={`${c.key}: ${c.count}`}
+                  >
+                    <div className="flex w-full flex-1 items-end">
+                      <div
+                        className="bg-primary/80 w-full rounded-t transition-[height] duration-500"
+                        style={{ height: `${(c.count / maxCount) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-muted-foreground text-[10px] tabular-nums">
+                      {c.key.slice(8)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* По привычкам */}
+            <div className="flex flex-col gap-3">
+              <h2 className="font-heading text-lg font-semibold tracking-tight">
+                По привычкам
+              </h2>
+              <div className="flex flex-col gap-2">
+                {habits.map((h) => {
+                  const rate = habitRate(h, completions, 30)
+                  const streak = getStreak(h)
+                  return (
+                    <div key={h.id} className="rounded-lg border p-3">
+                      <div className="flex items-center gap-3">
+                        <span className="grid size-8 shrink-0 place-content-center rounded-md bg-muted text-base">
+                          {h.icon || h.name.charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0 flex-1 truncate text-sm font-medium">
+                          {h.name}
+                        </div>
+                        <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
+                          <Flame className="size-3.5" />
+                          {streak}
+                        </span>
+                        <span className="w-10 text-right text-sm tabular-nums">
+                          {Math.round(rate * 100)}%
+                        </span>
+                      </div>
+                      <div className="bg-muted mt-2 h-1.5 w-full overflow-hidden rounded-full">
+                        <div
+                          className="bg-primary h-full rounded-full transition-[width] duration-500"
+                          style={{ width: `${rate * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
+      </PageBody>
+    </>
+  )
+}
