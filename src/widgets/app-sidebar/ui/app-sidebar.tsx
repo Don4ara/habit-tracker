@@ -22,8 +22,8 @@ import {
 } from "@/shared/ui/sidebar"
 import {
   PlusCircleIcon,
+  HomeIcon,
   ListChecksIcon,
-  CalendarDaysIcon,
   BarChart3Icon,
   Settings2Icon,
   HeartPulseIcon,
@@ -38,63 +38,12 @@ const data = {
     email: "ivan@example.com",
     avatar: "/avatars/ivan.jpg",
   },
-  teams: [
-    {
-      name: "Трекер привычек",
-      logo: <ListChecksIcon />,
-      plan: "Личный",
-    },
-  ],
   navMain: [
-    {
-      title: "Привычки",
-      url: "#",
-      icon: <ListChecksIcon />,
-      isActive: true,
-      items: [
-        { title: "Сегодня", url: "#" },
-        { title: "Все привычки", url: "#" },
-        { title: "Архив", url: "#" },
-      ],
-    },
-    {
-      title: "Статистика",
-      url: "#",
-      icon: <BarChart3Icon />,
-      items: [
-        { title: "Обзор", url: "#" },
-        { title: "Серии", url: "#" },
-        { title: "Отчёты", url: "#" },
-      ],
-    },
-    {
-      title: "Календарь",
-      url: "#",
-      icon: <CalendarDaysIcon />,
-      items: [
-        { title: "Месяц", url: "#" },
-        { title: "Неделя", url: "#" },
-      ],
-    },
-    {
-      title: "Достижения",
-      url: "#",
-      icon: <TrophyIcon />,
-      items: [
-        { title: "Полученные", url: "#" },
-        { title: "В процессе", url: "#" },
-      ],
-    },
-    {
-      title: "Настройки",
-      url: "#",
-      icon: <Settings2Icon />,
-      items: [
-        { title: "Общие", url: "#" },
-        { title: "Напоминания", url: "#" },
-        { title: "Тема", url: "#" },
-      ],
-    },
+    { title: "Главная", route: "home" as const, icon: <HomeIcon /> },
+    { title: "Привычки", route: "habits" as const, icon: <ListChecksIcon /> },
+    { title: "Статистика", route: "stats" as const, icon: <BarChart3Icon /> },
+    { title: "Достижения", route: "achievements" as const, icon: <TrophyIcon /> },
+    { title: "Настройки", route: "settings" as const, icon: <Settings2Icon /> },
   ],
   projects: [
     {
@@ -119,7 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
