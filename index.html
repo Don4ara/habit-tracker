@@ -5,6 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>habit-tracker</title>
+    <script>
+      // Применяем тему до первой отрисовки — убирает мигание при обновлении.
+      try {
+        document.documentElement.classList.add(
+          localStorage.getItem("ui-theme") || "light"
+        )
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
