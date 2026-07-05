@@ -12,4 +12,5 @@ export interface Habit {
   category: string
   days: WeekDay[]
   createdAt: string
+  archived?: boolean
 }

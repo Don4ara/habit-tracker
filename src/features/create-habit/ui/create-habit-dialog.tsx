@@ -19,7 +19,13 @@ import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover"
 import { Field, FieldError, FieldLabel } from "@/shared/ui/field"
-import { addHabit, type WeekDay, type WeekDayOption } from "@/entities/habit"
+import {
+  addHabit,
+  updateHabit,
+  type Habit,
+  type WeekDay,
+  type WeekDayOption,
+} from "@/entities/habit"
 
 const categories = ["Здоровье", "Спорт", "Учёба", "Чтение"]
 
@@ -124,12 +130,19 @@ function EmojiButton({
   )
 }
 
-export function CreateHabitDialog({ trigger }: { trigger: ReactNode }) {
+export function CreateHabitDialog({
+  trigger,
+  habit,
+}: {
+  trigger: ReactNode
+  habit?: Habit
+}) {
+  const isEdit = !!habit
   const [open, setOpen] = useState(false)
-  const [icon, setIcon] = useState("")
-  const [category, setCategory] = useState(categories[0])
+  const [icon, setIcon] = useState(habit?.icon ?? "")
+  const [category, setCategory] = useState(habit?.category ?? categories[0])
   const [days, setDays] = useState<Set<WeekDay>>(
-    new Set(weekDays.map((d) => d.id))
+    new Set(habit?.days ?? weekDays.map((d) => d.id))
   )
 
   const {
@@ -138,7 +151,21 @@ export function CreateHabitDialog({ trigger }: { trigger: ReactNode }) {
     setError,
     reset,
     formState: { errors },
-  } = useForm<HabitForm>({ resolver: zodResolver(habitSchema) })
+  } = useForm<HabitForm>({
+    resolver: zodResolver(habitSchema),
+    defaultValues: { name: habit?.name ?? "" },
+  })
+
+  // Сброс формы к значениям привычки при каждом открытии.
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      reset({ name: habit?.name ?? "" })
+      setIcon(habit?.icon ?? "")
+      setCategory(habit?.category ?? categories[0])
+      setDays(new Set(habit?.days ?? weekDays.map((d) => d.id)))
+    }
+    setOpen(next)
+  }
 
   const toggleDay = (id: WeekDay) =>
     setDays((prev) => {
@@ -149,22 +176,26 @@ export function CreateHabitDialog({ trigger }: { trigger: ReactNode }) {
     })
 
   const onSubmit = ({ name }: HabitForm) => {
-    if (!addHabit({ name, icon: icon || undefined, category, days: [...days] })) {
+    const payload = { name, icon: icon || undefined, category, days: [...days] }
+    const ok = isEdit
+      ? updateHabit(habit!.id, payload)
+      : addHabit(payload)
+    if (!ok) {
       setError("name", { message: `Привычка «${name}» уже существует` })
       return
     }
-    toast.success(`Привычка «${name}» создана`)
-    reset()
-    setIcon("")
+    toast.success(
+      isEdit ? `Привычка «${name}» обновлена` : `Привычка «${name}» создана`
+    )
     setOpen(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Новая привычка</DialogTitle>
+          <DialogTitle>{isEdit ? "Изменить привычку" : "Новая привычка"}</DialogTitle>
         </DialogHeader>
 
         <form id="create-habit-form" onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
@@ -210,7 +241,7 @@ export function CreateHabitDialog({ trigger }: { trigger: ReactNode }) {
             <Button variant="outline">Отмена</Button>
           </DialogClose>
           <Button type="submit" form="create-habit-form" disabled={days.size === 0}>
-            Создать
+            {isEdit ? "Сохранить" : "Создать"}
           </Button>
         </DialogFooter>
       </DialogContent>
