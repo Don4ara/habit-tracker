@@ -1,75 +1,54 @@
-# React + TypeScript + Vite
+# Трекер привычек
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Веб-приложение для отслеживания ежедневных привычек: отметки выполнения, серии, статистика и достижения. Данные хранятся локально в браузере, бэкенд не нужен. Работает офлайн (PWA).
 
-Currently, two official plugins are available:
+🔗 **[Открыть приложение](https://don4ara.github.io/habit-tracker/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Возможности
 
-## React Compiler
+- **Привычки** — создание с эмодзи, категорией и расписанием по дням недели; редактирование, архив, удаление с отменой.
+- **Главная** — обзор дня (кольцо прогресса, серия, счётчик), недельная полоса, чек-лист «на сегодня».
+- **Статистика** — выполнение за 30 дней, всего отметок, лучшая серия, график активности за 14 дней, проценты по каждой привычке.
+- **Достижения** — 18 наград (серии, объём отметок, активные дни, категории) и уровни.
+- **Детальная карточка** — тепловая карта за 14 недель, рекорд серии, показатели по привычке.
+- **Пространства** — несколько независимых наборов привычек с переключением (личное / работа / …).
+- **Перенос по QR** — данные кодируются в QR-код (gzip + base64), сканируются камерой на другом устройстве. Всё локально, без сторонних сервисов.
+- **Экспорт / импорт** — резервная копия в JSON.
+- **Тёмная тема**, адаптивная вёрстка, установка как PWA.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Стек
 
-## Expanding the ESLint configuration
+- **React 19** + **TypeScript** + **Vite**
+- **Tailwind CSS v4** + **shadcn/ui** (Radix)
+- **React Router** (чистые пути)
+- **Geist** / **JetBrains Mono** (self-hosted)
+- **vite-plugin-pwa** — офлайн и установка
+- Хранение: **localStorage** (по ключам пространства)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Архитектура
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Feature-Sliced Design:
 
 ```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+src/
+  app/        — точка входа, провайдеры, роуты, стили
+  pages/      — экраны (home, habits, stats, achievements, settings)
+  widgets/    — составные блоки (sidebar, habits-board, page-header)
+  features/   — действия (create-habit, habit-detail, transfer-habits, …)
+  entities/   — модель данных (habit, workspace) + стор на useSyncExternalStore
+  shared/     — ui-компоненты, утилиты, хуки
 ```
+
+## Запуск
+
+```bash
+npm install
+npm run dev      # дев-сервер
+npm run build    # прод-сборка (tsc + vite)
+npm run preview  # предпросмотр сборки
+npm run lint     # eslint
+```
+
+## Деплой
+
+Автодеплой на GitHub Pages через `.github/workflows/deploy.yml` при пуше в `main`. Для чистых путей SPA `index.html` дублируется в `404.html`.
