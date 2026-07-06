@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useLayoutEffect, useState } from "react"
 import type { ReactNode } from "react"
 
 import { ThemeContext } from "@/shared/lib"
@@ -17,18 +17,24 @@ export function ThemeProvider({
     () => (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? defaultTheme
   )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement
+    root.classList.add("theme-switching") // гасим css-переходы на время смены
     root.classList.remove("light", "dark")
     root.classList.add(theme)
     localStorage.setItem(STORAGE_KEY, theme)
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => root.classList.remove("theme-switching"))
+    )
+    return () => cancelAnimationFrame(id)
   }, [theme])
 
-  const value: ThemeContextValue = {
-    theme,
-    setTheme,
-    toggleTheme: () => setTheme(theme === "dark" ? "light" : "dark"),
-  }
+  const toggleTheme = useCallback(
+    () => setTheme((t) => (t === "dark" ? "light" : "dark")),
+    []
+  )
+
+  const value: ThemeContextValue = { theme, setTheme, toggleTheme }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
