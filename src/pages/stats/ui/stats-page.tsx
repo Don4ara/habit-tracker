@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { BarChart3, CheckCircle2, Flame, Target } from "lucide-react"
 
 import {
@@ -47,10 +48,22 @@ export function StatsPage() {
   const habits = useHabits()
   const completions = useCompletions()
 
-  const rate30 = completionRate(habits, completions, 30)
   const total = totalCompletions(completions)
-  const bestStreak = habits.reduce((m, h) => Math.max(m, getStreak(h)), 0)
-  const counts = dailyCounts(completions, 14)
+
+  // Тяжёлые агрегаты и ряды — пересчёт только при смене данных.
+  const { rate30, bestStreak, counts, perHabit } = useMemo(() => {
+    const counts = dailyCounts(completions, 14)
+    return {
+      rate30: completionRate(habits, completions, 30),
+      bestStreak: habits.reduce((m, h) => Math.max(m, getStreak(h)), 0),
+      counts,
+      perHabit: habits.map((h) => ({
+        habit: h,
+        rate: habitRate(h, completions, 30),
+        streak: getStreak(h),
+      })),
+    }
+  }, [habits, completions])
   const maxCount = Math.max(1, ...counts.map((c) => c.count))
 
   return (
@@ -130,9 +143,7 @@ export function StatsPage() {
                 По привычкам
               </h2>
               <div className="flex flex-col gap-2">
-                {habits.map((h) => {
-                  const rate = habitRate(h, completions, 30)
-                  const streak = getStreak(h)
+                {perHabit.map(({ habit: h, rate, streak }) => {
                   return (
                     <div key={h.id} className="rounded-lg border p-3">
                       <div className="flex items-center gap-3">
