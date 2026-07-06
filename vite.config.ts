@@ -1,8 +1,20 @@
+import { copyFileSync } from "fs"
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, type Plugin } from "vite"
 import { VitePWA } from "vite-plugin-pwa"
+
+// GitHub Pages отдаёт 404 на прямые ссылки SPA — дублируем index.html в 404.html.
+function spaFallback(): Plugin {
+  return {
+    name: "spa-404-fallback",
+    closeBundle() {
+      const dist = path.resolve(__dirname, "dist")
+      copyFileSync(path.join(dist, "index.html"), path.join(dist, "404.html"))
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,6 +22,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    spaFallback(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg"],

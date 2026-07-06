@@ -2,8 +2,10 @@ import { useEffect, useState } from "react"
 import { Download } from "lucide-react"
 import { toast } from "sonner"
 
+import { useNavigate } from "react-router-dom"
+
 import { importData } from "@/entities/habit"
-import { decodePayload, navigate } from "@/shared/lib"
+import { decodePayload } from "@/shared/lib"
 import { Button } from "@/shared/ui/button"
 import {
   Dialog,
@@ -25,6 +27,7 @@ function stripParam() {
 }
 
 export function ImportGate() {
+  const navigate = useNavigate()
   const [incoming, setIncoming] = useState<Incoming | null>(null)
 
   useEffect(() => {
@@ -59,7 +62,7 @@ export function ImportGate() {
   const confirm = () => {
     if (incoming && importData(incoming.json)) {
       toast.success(`Загружено привычек: ${incoming.habits}`)
-      navigate("habits")
+      navigate("/")
     } else {
       toast.error("Не удалось загрузить данные")
     }

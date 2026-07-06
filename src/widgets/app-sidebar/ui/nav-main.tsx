@@ -1,3 +1,5 @@
+import { useLocation, useNavigate } from "react-router-dom"
+
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -5,18 +7,18 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/shared/ui/sidebar"
-import { navigate, useRoute, type Route } from "@/shared/lib"
 
 export function NavMain({
   items,
 }: {
   items: {
     title: string
-    route: Route
+    to: string
     icon?: React.ReactNode
   }[]
 }) {
-  const active = useRoute()
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
 
   return (
     <SidebarGroup>
@@ -26,8 +28,8 @@ export function NavMain({
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton
               tooltip={item.title}
-              isActive={active === item.route}
-              onClick={() => navigate(item.route)}
+              isActive={pathname === item.to}
+              onClick={() => navigate(item.to)}
             >
               {item.icon}
               <span>{item.title}</span>

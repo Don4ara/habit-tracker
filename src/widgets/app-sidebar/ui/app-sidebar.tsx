@@ -39,11 +39,11 @@ const data = {
     avatar: "/avatars/ivan.jpg",
   },
   navMain: [
-    { title: "Главная", route: "home" as const, icon: <HomeIcon /> },
-    { title: "Привычки", route: "habits" as const, icon: <ListChecksIcon /> },
-    { title: "Статистика", route: "stats" as const, icon: <BarChart3Icon /> },
-    { title: "Достижения", route: "achievements" as const, icon: <TrophyIcon /> },
-    { title: "Настройки", route: "settings" as const, icon: <Settings2Icon /> },
+    { title: "Главная", to: "/", icon: <HomeIcon /> },
+    { title: "Привычки", to: "/habits", icon: <ListChecksIcon /> },
+    { title: "Статистика", to: "/stats", icon: <BarChart3Icon /> },
+    { title: "Достижения", to: "/achievements", icon: <TrophyIcon /> },
+    { title: "Настройки", to: "/settings", icon: <Settings2Icon /> },
   ],
   projects: [
     {

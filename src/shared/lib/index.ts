@@ -1,6 +1,4 @@
 export { cn } from "./utils"
 export { ThemeContext, useTheme } from "./theme"
 export type { Theme, ThemeContextValue } from "./theme"
-export { useRoute, navigate, ROUTES } from "./router"
-export type { Route } from "./router"
 export { encodePayload, decodePayload, buildTransferUrl } from "./transfer"
