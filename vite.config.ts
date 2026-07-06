@@ -24,8 +24,19 @@ export default defineConfig({
     tailwindcss(),
     spaFallback(),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       registerType: "autoUpdate",
+      injectRegister: "auto",
       includeAssets: ["favicon.svg"],
+      injectManifest: {
+        globPatterns: ["**/*.{js,css,html,svg,woff2}"],
+      },
+      devOptions: {
+        enabled: true,
+        type: "module",
+      },
       manifest: {
         name: "Трекер привычек",
         short_name: "Привычки",
