@@ -4,6 +4,7 @@ import {
   Archive,
   ArchiveRestore,
   ChevronDown,
+  EllipsisVertical,
   Flame,
   ListFilter,
   ListTodo,
@@ -34,6 +35,7 @@ import { Input } from "@/shared/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -126,64 +128,69 @@ function progressMessage(done: number, total: number): string {
 }
 
 function HabitActions({ habit }: { habit: Habit }) {
+  const [editOpen, setEditOpen] = useState(false)
+  const archived = habit.archived
+
+  const del = () => {
+    const snap = removeHabit(habit.id)
+    if (snap)
+      toast(`Привычка «${habit.name}» удалена`, {
+        action: { label: "Отменить", onClick: () => restoreHabit(snap) },
+      })
+  }
+
   return (
-    <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-      {habit.archived ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={`Вернуть привычку ${habit.name}`}
-          className="text-muted-foreground"
-          onClick={() => setArchived(habit.id, false)}
-        >
-          <ArchiveRestore className="size-4" />
-        </Button>
-      ) : (
-        <>
-          <CreateHabitDialog
-            habit={habit}
-            trigger={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Изменить привычку ${habit.name}`}
-                className="text-muted-foreground"
-              >
-                <Pencil className="size-4" />
-              </Button>
-            }
-          />
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`В архив ${habit.name}`}
-            className="text-muted-foreground"
-            onClick={() => setArchived(habit.id, true)}
+            aria-label={`Действия: ${habit.name}`}
+            className="text-muted-foreground shrink-0"
           >
-            <Archive className="size-4" />
+            <EllipsisVertical className="size-4" />
           </Button>
-        </>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {!archived && (
+            <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+              <Pencil className="size-4" />
+              Изменить
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem onSelect={() => setArchived(habit.id, !archived)}>
+            {archived ? (
+              <>
+                <ArchiveRestore className="size-4" />
+                Вернуть из архива
+              </>
+            ) : (
+              <>
+                <Archive className="size-4" />
+                В архив
+              </>
+            )}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onSelect={del}
+          >
+            <Trash2 className="size-4" />
+            Удалить
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {!archived && (
+        <CreateHabitDialog
+          habit={habit}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
       )}
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label={`Удалить привычку ${habit.name}`}
-        className="text-muted-foreground"
-        onClick={() => {
-          const snap = removeHabit(habit.id)
-          if (snap)
-            toast(`Привычка «${habit.name}» удалена`, {
-              action: { label: "Отменить", onClick: () => restoreHabit(snap) },
-            })
-        }}
-      >
-        <Trash2 className="size-4" />
-      </Button>
-    </div>
+    </>
   )
 }
 

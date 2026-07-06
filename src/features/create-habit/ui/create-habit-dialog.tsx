@@ -133,12 +133,19 @@ function EmojiButton({
 export function CreateHabitDialog({
   trigger,
   habit,
+  open: openProp,
+  onOpenChange: setOpenProp,
 }: {
-  trigger: ReactNode
+  trigger?: ReactNode
   habit?: Habit
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const isEdit = !!habit
-  const [open, setOpen] = useState(false)
+  const [openState, setOpenState] = useState(false)
+  const open = openProp ?? openState
+  const setOpen = (v: boolean) =>
+    setOpenProp ? setOpenProp(v) : setOpenState(v)
   const [icon, setIcon] = useState(habit?.icon ?? "")
   const [category, setCategory] = useState(habit?.category ?? categories[0])
   const [days, setDays] = useState<Set<WeekDay>>(
@@ -192,7 +199,7 @@ export function CreateHabitDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Изменить привычку" : "Новая привычка"}</DialogTitle>
