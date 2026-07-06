@@ -128,11 +128,35 @@ export function updateHabit(
   return true
 }
 
-export function removeHabit(id: string) {
+export interface HabitSnapshot {
+  habit: Habit
+  completions: string[]
+  index: number
+}
+
+/** Удаляет привычку, возвращает снапшот для отмены (или null). */
+export function removeHabit(id: string): HabitSnapshot | null {
+  const index = habits.findIndex((h) => h.id === id)
+  if (index === -1) return null
+  const habit = habits[index]
+  const habitCompletions = completions[id] ?? []
   habits = habits.filter((h) => h.id !== id)
   const rest = { ...completions }
   delete rest[id]
   completions = rest
+  emit()
+  emitCompletions()
+  return { habit, completions: habitCompletions, index }
+}
+
+/** Восстанавливает удалённую привычку на прежнее место. */
+export function restoreHabit(snap: HabitSnapshot) {
+  if (habits.some((h) => h.id === snap.habit.id)) return
+  const next = [...habits]
+  next.splice(Math.min(snap.index, next.length), 0, snap.habit)
+  habits = next
+  if (snap.completions.length)
+    completions = { ...completions, [snap.habit.id]: snap.completions }
   emit()
   emitCompletions()
 }

@@ -5,6 +5,7 @@ export {
   addHabit,
   updateHabit,
   removeHabit,
+  restoreHabit,
   setArchived,
   clearAll,
   exportData,

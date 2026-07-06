@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 import {
   Archive,
   ArchiveRestore,
@@ -7,7 +8,8 @@ import {
   ListFilter,
   ListTodo,
   Pencil,
-  Target,
+  Search,
+  Sparkles,
   Trash2,
 } from "lucide-react"
 
@@ -17,6 +19,7 @@ import {
   useCompletions,
   toggleCompletion,
   removeHabit,
+  restoreHabit,
   setArchived,
   getStreak,
   dateKey,
@@ -27,6 +30,7 @@ import {
 import { CreateHabitDialog } from "@/features/create-habit"
 import { HabitDetailDialog } from "@/features/habit-detail"
 import { Button } from "@/shared/ui/button"
+import { Input } from "@/shared/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,35 +90,39 @@ function ProgressRing({ value }: { value: number }) {
         strokeLinecap="round"
         strokeDasharray={c}
         strokeDashoffset={c * (1 - value)}
-        className="stroke-primary transition-[stroke-dashoffset] duration-500 ease-out"
+        className="stroke-success transition-[stroke-dashoffset] duration-500 ease-out"
       />
     </svg>
   )
 }
 
-function StatCard({
+function MiniStat({
   icon,
-  label,
   value,
-  hint,
+  label,
 }: {
   icon: React.ReactNode
-  label: string
   value: React.ReactNode
-  hint?: string
+  label: string
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border p-4">
-      <div className="text-muted-foreground flex items-center gap-2 text-sm">
-        {icon}
-        {label}
-      </div>
-      <div className="font-heading text-3xl font-semibold tracking-tight tabular-nums">
+    <div className="flex items-center gap-2">
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="font-heading text-lg font-semibold tabular-nums leading-none">
         {value}
-      </div>
-      {hint && <div className="text-muted-foreground text-xs">{hint}</div>}
+      </span>
+      <span className="text-muted-foreground text-xs">{label}</span>
     </div>
   )
+}
+
+// Строка мотивации под прогрессом — зависит от доли выполнения.
+function progressMessage(done: number, total: number): string {
+  if (total === 0) return "На сегодня привычек не запланировано"
+  if (done === 0) return "Начните день с первой отметки"
+  if (done === total) return "Идеальный день. Все привычки выполнены"
+  if (done / total >= 0.5) return "Больше половины позади, дожимайте"
+  return "Хорошее начало, продолжайте"
 }
 
 function HabitActions({ habit }: { habit: Habit }) {
@@ -165,7 +173,13 @@ function HabitActions({ habit }: { habit: Habit }) {
         size="icon"
         aria-label={`Удалить привычку ${habit.name}`}
         className="text-muted-foreground"
-        onClick={() => removeHabit(habit.id)}
+        onClick={() => {
+          const snap = removeHabit(habit.id)
+          if (snap)
+            toast(`Привычка «${habit.name}» удалена`, {
+              action: { label: "Отменить", onClick: () => restoreHabit(snap) },
+            })
+        }}
       >
         <Trash2 className="size-4" />
       </Button>
@@ -180,8 +194,11 @@ function HabitRow({
   habit: Habit
   todayKey: string
 }) {
-  const isDoneToday = useCompletions()[habit.id]?.includes(todayKey) ?? false
-  const streak = getStreak(habit)
+  const habitDone = useCompletions()[habit.id]
+  const isDoneToday = habitDone?.includes(todayKey) ?? false
+  // habitDone в deps намеренно: getStreak читает глобальные отметки.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const streak = useMemo(() => getStreak(habit), [habit, habitDone])
   const cbId = `habit-${habit.id}`
 
   return (
@@ -283,12 +300,16 @@ function ManageRow({ habit }: { habit: Habit }) {
 export function HabitsList() {
   const habits = useAllHabits()
   const [category, setCategory] = useState<string | null>(null)
+  const [query, setQuery] = useState("")
   const active = habits.filter((h) => !h.archived)
   const archived = habits.filter((h) => h.archived)
   const categories = [...new Set(active.map((h) => h.category))]
-  const filtered = category
-    ? active.filter((h) => h.category === category)
-    : active
+  const q = query.trim().toLowerCase()
+  const filtered = active.filter(
+    (h) =>
+      (!category || h.category === category) &&
+      (!q || h.name.toLowerCase().includes(q))
+  )
 
   if (habits.length === 0) {
     return (
@@ -344,9 +365,19 @@ export function HabitsList() {
         )}
       </div>
 
+      <div className="relative">
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Поиск привычки"
+          className="pl-9"
+        />
+      </div>
+
       {filtered.length === 0 && (
         <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
-          Нет привычек в категории «{category}».
+          Ничего не найдено. Измените запрос или фильтр.
         </p>
       )}
 
@@ -382,26 +413,51 @@ export function HabitsBoard() {
   const isDoneOn = (id: string, key: string) =>
     completions[id]?.includes(key) ?? false
 
-  const todayHabits = habits.filter((h) => h.days.includes(todayWd))
+  const todayHabits = useMemo(
+    () => habits.filter((h) => h.days.includes(todayWd)),
+    [habits, todayWd]
+  )
   const doneToday = todayHabits.filter((h) => isDoneOn(h.id, todayKey)).length
   const ratio = todayHabits.length ? doneToday / todayHabits.length : 0
-  const bestStreak = habits.reduce((m, h) => Math.max(m, getStreak(h)), 0)
 
-  // Прогресс по дням текущей недели: выполнено / запланировано.
-  const weekStart = startOfWeek()
-  const weekProgress = WEEK.map((wd, i) => {
-    const d = new Date(weekStart)
-    d.setDate(d.getDate() + i)
-    const key = dateKey(d)
-    const scheduled = habits.filter((h) => h.days.includes(wd.id))
-    const doneCount = scheduled.filter((h) => isDoneOn(h.id, key)).length
-    return {
-      ...wd,
-      ratio: scheduled.length ? doneCount / scheduled.length : 0,
-      hasScheduled: scheduled.length > 0,
-      isToday: wd.id === todayWd,
-    }
-  })
+  // Тяжёлые расчёты серий и недели — пересчёт только при смене данных.
+  const bestStreak = useMemo(
+    () => habits.reduce((m, h) => Math.max(m, getStreak(h)), 0),
+    // completions намеренно: getStreak читает глобальные отметки.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [habits, completions]
+  )
+
+  const weekProgress = useMemo(() => {
+    const weekStart = startOfWeek()
+    return WEEK.map((wd, i) => {
+      const d = new Date(weekStart)
+      d.setDate(d.getDate() + i)
+      const key = dateKey(d)
+      const scheduled = habits.filter((h) => h.days.includes(wd.id))
+      const doneCount = scheduled.filter(
+        (h) => completions[h.id]?.includes(key) ?? false
+      ).length
+      return {
+        ...wd,
+        ratio: scheduled.length ? doneCount / scheduled.length : 0,
+        hasScheduled: scheduled.length > 0,
+        isToday: wd.id === todayWd,
+      }
+    })
+    // todayKey намеренно: форсирует пересчёт при смене суток.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habits, completions, todayKey, todayWd])
+
+  // Празднуем идеальный день один раз за сутки (не при каждом перещёлкивании).
+  const allDone = todayHabits.length > 0 && doneToday === todayHabits.length
+  useEffect(() => {
+    if (!allDone) return
+    const key = `celebrated-${todayKey}`
+    if (localStorage.getItem(key)) return
+    localStorage.setItem(key, "1")
+    toast.success("Идеальный день! Все привычки на сегодня выполнены")
+  }, [allDone, todayKey])
 
   if (allHabits.length === 0) {
     return (
@@ -424,37 +480,40 @@ export function HabitsBoard() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Обзор */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="flex items-center gap-4 rounded-xl border p-4">
-          <div className="relative">
-            <ProgressRing value={ratio} />
-            <span className="absolute inset-0 grid place-content-center text-sm font-semibold tabular-nums">
-              {Math.round(ratio * 100)}%
+      {/* Обзор дня */}
+      <div className="flex flex-col gap-5 rounded-2xl border p-5 sm:flex-row sm:items-center sm:gap-6">
+        <div className="relative shrink-0 self-start sm:self-center">
+          <ProgressRing value={ratio} />
+          <span className="absolute inset-0 grid place-content-center text-sm font-semibold tabular-nums">
+            {Math.round(ratio * 100)}%
+          </span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+            Сегодня
+          </div>
+          <div className="font-heading text-3xl font-semibold tabular-nums">
+            {doneToday}
+            <span className="text-muted-foreground text-xl">
+              /{todayHabits.length}
             </span>
           </div>
-          <div>
-            <div className="text-muted-foreground text-sm">Сегодня</div>
-            <div className="font-heading text-2xl font-semibold tabular-nums">
-              {doneToday}/{todayHabits.length}
-            </div>
-            <div className="text-muted-foreground text-xs">
-              привычек выполнено
-            </div>
+          <p className="text-muted-foreground mt-1 text-sm text-balance">
+            {progressMessage(doneToday, todayHabits.length)}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t pt-4">
+            <MiniStat
+              icon={<Flame className="size-4" />}
+              value={bestStreak}
+              label="серия"
+            />
+            <MiniStat
+              icon={<Sparkles className="size-4" />}
+              value={habits.length}
+              label="привычек"
+            />
           </div>
         </div>
-        <StatCard
-          icon={<Flame className="size-4" />}
-          label="Лучшая серия"
-          value={<span className="tabular-nums">{bestStreak}</span>}
-          hint="дней подряд"
-        />
-        <StatCard
-          icon={<Target className="size-4" />}
-          label="Всего привычек"
-          value={<span className="tabular-nums">{habits.length}</span>}
-          hint={`${todayHabits.length} на сегодня`}
-        />
       </div>
 
       {/* Неделя */}
@@ -475,7 +534,7 @@ export function HabitsBoard() {
               className={cn(
                 "grid size-8 place-content-center rounded-full text-xs tabular-nums transition-colors",
                 !d.hasScheduled && "bg-muted/40 text-muted-foreground",
-                d.hasScheduled && d.ratio === 1 && "bg-primary text-primary-foreground",
+                d.hasScheduled && d.ratio === 1 && "bg-success text-success-foreground",
                 d.hasScheduled && d.ratio > 0 && d.ratio < 1 && "bg-muted text-foreground",
                 d.hasScheduled && d.ratio === 0 && "border text-muted-foreground",
                 d.isToday && "ring-primary ring-2 ring-offset-2 ring-offset-background"
