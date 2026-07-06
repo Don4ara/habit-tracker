@@ -35,7 +35,7 @@ function cellClass(c: {
   future: boolean
 }): string {
   if (c.future) return "bg-transparent"
-  if (c.done) return "bg-primary"
+  if (c.done) return "bg-success"
   if (c.scheduled) return "bg-muted"
   return "bg-muted/25"
 }

@@ -18,7 +18,7 @@ import {
   Trophy,
   Zap,
 } from "lucide-react"
-import type { ReactNode } from "react"
+import { useMemo, type ReactNode } from "react"
 
 import {
   useHabits,
@@ -80,10 +80,17 @@ export function AchievementsPage() {
   const completions = useCompletions()
 
   const total = totalCompletions(completions)
-  const maxStreak = habits.reduce((m, h) => Math.max(m, bestStreak(h, completions)), 0)
+
+  // Тяжёлые серии/агрегаты — пересчёт только при смене данных.
+  const { maxStreak, activeDays, categories } = useMemo(
+    () => ({
+      maxStreak: habits.reduce((m, h) => Math.max(m, bestStreak(h, completions)), 0),
+      activeDays: new Set(Object.values(completions).flat()).size,
+      categories: new Set(habits.map((h) => h.category)).size,
+    }),
+    [habits, completions]
+  )
   const todayRatio = dayRatio(habits, completions, new Date())
-  const activeDays = new Set(Object.values(completions).flat()).size
-  const categories = new Set(habits.map((h) => h.category)).size
 
   const metrics: Record<Metric, number> = {
     habits: habits.length,
@@ -146,14 +153,14 @@ export function AchievementsPage() {
                 key={d.id}
                 className={cn(
                   "flex items-center gap-3 rounded-xl border p-4 transition-colors",
-                  done ? "bg-muted/40" : "opacity-80"
+                  done ? "border-success/40 bg-success/10" : "opacity-80"
                 )}
               >
                 <div
                   className={cn(
                     "grid size-11 shrink-0 place-content-center rounded-lg",
                     done
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-success text-success-foreground"
                       : "bg-muted text-muted-foreground"
                   )}
                 >
