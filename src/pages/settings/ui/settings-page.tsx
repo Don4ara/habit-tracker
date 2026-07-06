@@ -75,7 +75,11 @@ export function SettingsPage() {
             title="Тема"
             description={isDark ? "Тёмная" : "Светлая"}
             action={
-              <Button variant="outline" size="sm" onClick={toggleTheme}>
+              <Button
+                size="sm"
+                onClick={toggleTheme}
+                className="min-w-8 bg-primary text-primary-foreground ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+              >
                 {isDark ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
                 {isDark ? "Светлая" : "Тёмная"}
               </Button>
