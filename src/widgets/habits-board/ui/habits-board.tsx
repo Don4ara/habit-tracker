@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
+import confetti from "canvas-confetti"
 import { toast } from "sonner"
 import {
   Archive,
@@ -23,8 +25,11 @@ import {
   restoreHabit,
   setArchived,
   getStreak,
+  isFrozen,
+  useFreezes,
   dateKey,
   weekDayOf,
+  activeOn,
   type Habit,
   type WeekDay,
 } from "@/entities/habit"
@@ -203,6 +208,10 @@ function HabitRow({
 }) {
   const habitDone = useCompletions()[habit.id]
   const isDoneToday = habitDone?.includes(todayKey) ?? false
+  useFreezes() // ре-рендер при смене заморозок
+  const frozen = isFrozen(habit.id, todayKey)
+  const frozenOnly = frozen && !isDoneToday // заморожен, но не отмечен
+  const shownDone = isDoneToday || frozen
   // habitDone в deps намеренно: getStreak читает глобальные отметки.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const streak = useMemo(() => getStreak(habit), [habit, habitDone])
@@ -212,14 +221,22 @@ function HabitRow({
     <div
       className={cn(
         "group flex items-center gap-3 rounded-lg border p-3 transition-colors",
-        isDoneToday ? "bg-muted/40" : "hover:bg-muted/50"
+        frozenOnly
+          ? "border-blue-500/50 bg-blue-500/5"
+          : isDoneToday
+            ? "bg-muted/40"
+            : "hover:bg-muted/50"
       )}
     >
       <Checkbox
         id={cbId}
-        checked={isDoneToday}
+        checked={shownDone}
         onCheckedChange={() => toggleCompletion(habit.id, todayKey)}
-        className="size-5"
+        className={cn(
+          "size-5",
+          frozenOnly &&
+            "border-blue-500 text-white data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-500 data-[state=checked]:text-white"
+        )}
       />
       <HabitDetailDialog
         habit={habit}
@@ -235,7 +252,7 @@ function HabitRow({
               <div
                 className={cn(
                   "truncate text-sm font-medium",
-                  isDoneToday && "text-muted-foreground line-through"
+                  shownDone && "text-muted-foreground line-through"
                 )}
               >
                 {habit.name}
@@ -306,7 +323,18 @@ function ManageRow({ habit }: { habit: Habit }) {
 
 export function HabitsList() {
   const habits = useAllHabits()
-  const [category, setCategory] = useState<string | null>(null)
+  // Фильтр категории живёт в URL — сайдбар навигирует сюда с ?category=…
+  const [searchParams, setSearchParams] = useSearchParams()
+  const category = searchParams.get("category")
+  const setCategory = (c: string | null) =>
+    setSearchParams(
+      (prev) => {
+        if (c) prev.set("category", c)
+        else prev.delete("category")
+        return prev
+      },
+      { replace: true }
+    )
   const [query, setQuery] = useState("")
   const active = habits.filter((h) => !h.archived)
   const archived = habits.filter((h) => h.archived)
@@ -427,6 +455,21 @@ export function HabitsBoard() {
   const doneToday = todayHabits.filter((h) => isDoneOn(h.id, todayKey)).length
   const ratio = todayHabits.length ? doneToday / todayHabits.length : 0
 
+  // «Привычка дня» — запланированная на сегодня, детерминированно по дате.
+  // Выполнил текущую — сразу показываем следующую невыполненную для быстрой отметки.
+  const habitOfDay = useMemo(() => {
+    if (todayHabits.length === 0) return null
+    let hash = 0
+    for (const ch of todayKey) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
+    const start = hash % todayHabits.length
+    for (let i = 0; i < todayHabits.length; i++) {
+      const h = todayHabits[(start + i) % todayHabits.length]
+      if (!isDoneOn(h.id, todayKey)) return h
+    }
+    return todayHabits[start] // все выполнены
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayHabits, todayKey, completions])
+
   // Тяжёлые расчёты серий и недели — пересчёт только при смене данных.
   const bestStreak = useMemo(
     () => habits.reduce((m, h) => Math.max(m, getStreak(h)), 0),
@@ -441,7 +484,7 @@ export function HabitsBoard() {
       const d = new Date(weekStart)
       d.setDate(d.getDate() + i)
       const key = dateKey(d)
-      const scheduled = habits.filter((h) => h.days.includes(wd.id))
+      const scheduled = habits.filter((h) => activeOn(h, d))
       const doneCount = scheduled.filter(
         (h) => completions[h.id]?.includes(key) ?? false
       ).length
@@ -464,6 +507,10 @@ export function HabitsBoard() {
     if (localStorage.getItem(key)) return
     localStorage.setItem(key, "1")
     toast.success("Идеальный день! Все привычки на сегодня выполнены")
+    // Конфети из двух нижних углов — один раз за сутки.
+    const opts = { spread: 70, startVelocity: 45, particleCount: 80, zIndex: 100 }
+    confetti({ ...opts, origin: { x: 0, y: 1 }, angle: 60 })
+    confetti({ ...opts, origin: { x: 1, y: 1 }, angle: 120 })
   }, [allDone, todayKey])
 
   if (allHabits.length === 0) {
@@ -487,6 +534,53 @@ export function HabitsBoard() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Привычка дня / похвала за идеальный день */}
+      {allDone ? (
+        <div className="flex items-center gap-4 rounded-2xl border border-success/40 bg-success/10 p-5">
+          <span className="grid size-12 shrink-0 place-content-center rounded-xl bg-success/20 text-2xl">
+            🎉
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-success flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+              <Sparkles className="size-3.5" />
+              Идеальный день
+            </div>
+            <div className="font-heading text-lg font-semibold">
+              Ты большой молодец!
+            </div>
+            <div className="text-muted-foreground truncate text-sm">
+              Все привычки на сегодня выполнены — так держать!
+            </div>
+          </div>
+        </div>
+      ) : (
+        habitOfDay && (
+          <div className="flex items-center gap-4 rounded-2xl border bg-primary/5 p-5">
+            <span className="grid size-12 shrink-0 place-content-center rounded-xl bg-primary/10 text-2xl">
+              {habitOfDay.icon || habitOfDay.name.charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-primary flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                <Sparkles className="size-3.5" />
+                Привычка дня
+              </div>
+              <div className="font-heading truncate text-lg font-semibold">
+                {habitOfDay.name}
+              </div>
+              <div className="text-muted-foreground truncate text-sm">
+                {habitOfDay.category}
+              </div>
+            </div>
+            <Button
+              variant="default"
+              onClick={() => toggleCompletion(habitOfDay.id, todayKey)}
+            >
+              Отметить
+            </Button>
+          </div>
+        )
+      )}
+
       {/* Обзор дня */}
       <div className="flex flex-col gap-5 rounded-2xl border p-5 sm:flex-row sm:items-center sm:gap-6">
         <div className="relative shrink-0 self-start sm:self-center">
