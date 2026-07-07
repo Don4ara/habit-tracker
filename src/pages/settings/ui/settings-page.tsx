@@ -1,8 +1,14 @@
 import { useRef, useState } from "react"
-import { Download, MoonIcon, QrCode, SunIcon, Trash2, Upload } from "lucide-react"
+import { Download, Minus, MoonIcon, Plus, QrCode, Snowflake, SunIcon, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 
-import { exportData, importData, clearAll } from "@/entities/habit"
+import {
+  exportData,
+  importData,
+  clearAll,
+  useFreezeLimit,
+  setFreezeLimit,
+} from "@/entities/habit"
 import { TransferDialog } from "@/features/transfer-habits"
 import { PageBody, PageHeader } from "@/widgets/page-header"
 import { Button } from "@/shared/ui/button"
@@ -32,6 +38,7 @@ function Row({
 export function SettingsPage() {
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === "dark"
+  const freezeLimit = useFreezeLimit()
   const fileRef = useRef<HTMLInputElement>(null)
   const [confirmClear, setConfirmClear] = useState(false)
 
@@ -83,6 +90,41 @@ export function SettingsPage() {
                 {isDark ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
                 {isDark ? "Светлая" : "Тёмная"}
               </Button>
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <h2 className="font-heading text-lg font-semibold tracking-tight">
+            Серии
+          </h2>
+          <Row
+            title="Заморозки в месяц"
+            description="Сколько пропущенных дней в месяц можно заморозить, не разрывая серию"
+            action={
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label="Меньше"
+                  onClick={() => setFreezeLimit(freezeLimit - 1)}
+                  disabled={freezeLimit <= 0}
+                >
+                  <Minus className="size-4" />
+                </Button>
+                <span className="flex w-8 items-center justify-center gap-1 font-semibold tabular-nums">
+                  <Snowflake className="size-3.5 text-blue-500" />
+                  {freezeLimit}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label="Больше"
+                  onClick={() => setFreezeLimit(freezeLimit + 1)}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
             }
           />
         </div>

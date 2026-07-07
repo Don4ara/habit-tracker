@@ -7,9 +7,14 @@ import {
 
 import type { Habit, WeekDay } from "./types"
 
-// Данные хранятся по пространствам: `habits:<wsId>` и `habit-completions:<wsId>`.
+// Данные хранятся по пространствам: `habits:<wsId>`, `habit-completions:<wsId>`,
+// заметки — `habit-notes:<wsId>` = { habitId: { dateKey: текст } }.
 const hKey = () => `habits:${getActiveWorkspaceId()}`
 const cKey = () => `habit-completions:${getActiveWorkspaceId()}`
+const nKey = () => `habit-notes:${getActiveWorkspaceId()}`
+// Заморозки: `habit-freezes:<wsId>` = { habitId: [dateKey,...] } — дни, где пропуск не рвёт серию.
+const fKey = () => `habit-freezes:${getActiveWorkspaceId()}`
+const FREEZE_LIMIT_KEY = "freeze-limit"
 
 // Разовая миграция старых глобальных ключей в пространство "personal".
 function migrateLegacy() {
@@ -24,8 +29,13 @@ function migrateLegacy() {
 }
 migrateLegacy()
 
+type Notes = Record<string, Record<string, string>>
+
 let habits: Habit[] = load()
 let completions: Record<string, string[]> = loadCompletions()
+let notes: Notes = loadNotes()
+let freezes: Record<string, string[]> = loadFreezes()
+let freezeLimit: number = loadFreezeLimit()
 // Кэш активных (неархивных) привычек — стабильная ссылка для useSyncExternalStore.
 let activeHabits: Habit[] = computeActive()
 const listeners = new Set<() => void>()
@@ -38,6 +48,8 @@ function computeActive(): Habit[] {
 subscribeActiveWorkspace(() => {
   habits = load()
   completions = loadCompletions()
+  notes = loadNotes()
+  freezes = loadFreezes()
   activeHabits = computeActive()
   notify()
 })
@@ -58,6 +70,27 @@ function loadCompletions(): Record<string, string[]> {
   }
 }
 
+function loadNotes(): Notes {
+  try {
+    return JSON.parse(localStorage.getItem(nKey()) ?? "{}")
+  } catch {
+    return {}
+  }
+}
+
+function loadFreezes(): Record<string, string[]> {
+  try {
+    return JSON.parse(localStorage.getItem(fKey()) ?? "{}")
+  } catch {
+    return {}
+  }
+}
+
+function loadFreezeLimit(): number {
+  const n = Number(localStorage.getItem(FREEZE_LIMIT_KEY))
+  return Number.isFinite(n) && n >= 0 ? n : 2
+}
+
 function notify() {
   listeners.forEach((l) => l())
 }
@@ -70,6 +103,16 @@ function emit() {
 
 function emitCompletions() {
   localStorage.setItem(cKey(), JSON.stringify(completions))
+  notify()
+}
+
+function emitNotes() {
+  localStorage.setItem(nKey(), JSON.stringify(notes))
+  notify()
+}
+
+function emitFreezes() {
+  localStorage.setItem(fKey(), JSON.stringify(freezes))
   notify()
 }
 
@@ -90,6 +133,80 @@ export function useAllHabits(): Habit[] {
 
 export function useCompletions(): Record<string, string[]> {
   return useSyncExternalStore(subscribe, () => completions)
+}
+
+export function useNotes(): Notes {
+  return useSyncExternalStore(subscribe, () => notes)
+}
+
+export function useFreezes(): Record<string, string[]> {
+  return useSyncExternalStore(subscribe, () => freezes)
+}
+
+export function useFreezeLimit(): number {
+  return useSyncExternalStore(subscribe, () => freezeLimit)
+}
+
+export function getFreezeLimit(): number {
+  return freezeLimit
+}
+
+/** Меняет лимит заморозок на месяц (глобально для всех пространств). */
+export function setFreezeLimit(n: number) {
+  freezeLimit = Math.max(0, Math.floor(n))
+  localStorage.setItem(FREEZE_LIMIT_KEY, String(freezeLimit))
+  notify()
+}
+
+export function isFrozen(id: string, key: string): boolean {
+  return freezes[id]?.includes(key) ?? false
+}
+
+/** Сколько заморозок израсходовано ВСЕМИ привычками в месяце (YYYY-MM). Лимит общий. */
+export function freezesUsedInMonth(month: string): number {
+  return Object.values(freezes)
+    .flat()
+    .filter((k) => k.startsWith(month)).length
+}
+
+/**
+ * Заморозить/разморозить день привычки. Лимит заморозок общий на все привычки.
+ * Возвращает false, если лимит месяца исчерпан (заморозка не добавлена).
+ */
+export function toggleFreeze(id: string, key = dateKey()): boolean {
+  const list = freezes[id] ?? []
+  if (list.includes(key)) {
+    const next = list.filter((k) => k !== key)
+    const rest = { ...freezes }
+    if (next.length) rest[id] = next
+    else delete rest[id]
+    freezes = rest
+    emitFreezes()
+    return true
+  }
+  if (freezesUsedInMonth(key.slice(0, 7)) >= freezeLimit) return false
+  freezes = { ...freezes, [id]: [...list, key] }
+  emitFreezes()
+  return true
+}
+
+export function getNote(id: string, key: string): string {
+  return notes[id]?.[key] ?? ""
+}
+
+/** Сохраняет/удаляет заметку привычки за день. Пустой текст — удаление. */
+export function setNote(id: string, key: string, text: string) {
+  const trimmed = text.trim()
+  const forHabit = { ...(notes[id] ?? {}) }
+  if (trimmed) forHabit[key] = trimmed
+  else delete forHabit[key]
+  if (Object.keys(forHabit).length) notes = { ...notes, [id]: forHabit }
+  else {
+    const rest = { ...notes }
+    delete rest[id]
+    notes = rest
+  }
+  emitNotes()
 }
 
 export function setArchived(id: string, archived: boolean) {
@@ -144,6 +261,18 @@ export function removeHabit(id: string): HabitSnapshot | null {
   const rest = { ...completions }
   delete rest[id]
   completions = rest
+  if (notes[id]) {
+    const n = { ...notes }
+    delete n[id]
+    notes = n
+    emitNotes()
+  }
+  if (freezes[id]) {
+    const f = { ...freezes }
+    delete f[id]
+    freezes = f
+    emitFreezes()
+  }
   emit()
   emitCompletions()
   return { habit, completions: habitCompletions, index }
@@ -164,12 +293,16 @@ export function restoreHabit(snap: HabitSnapshot) {
 export function clearAll() {
   habits = []
   completions = {}
+  notes = {}
+  freezes = {}
   emit()
   emitCompletions()
+  emitNotes()
+  emitFreezes()
 }
 
 export function exportData(): string {
-  return JSON.stringify({ habits, completions }, null, 2)
+  return JSON.stringify({ habits, completions, notes, freezes }, null, 2)
 }
 
 /** Импорт из JSON. false — если структура невалидна. */
@@ -182,8 +315,14 @@ export function importData(json: string): boolean {
       parsed.completions && typeof parsed.completions === "object"
         ? parsed.completions
         : {}
+    notes =
+      parsed.notes && typeof parsed.notes === "object" ? parsed.notes : {}
+    freezes =
+      parsed.freezes && typeof parsed.freezes === "object" ? parsed.freezes : {}
     emit()
     emitCompletions()
+    emitNotes()
+    emitFreezes()
     return true
   } catch {
     return false
@@ -222,19 +361,29 @@ export function toggleCompletion(id: string, key = dateKey()) {
 /**
  * Текущая серия: подряд идущие запланированные дни с отметкой, считая назад.
  * Сегодня без отметки серию не рвёт (день ещё не закончился).
+ * «Заморозка»: вручную помеченный день (снежинкой) — пропуск не рвёт серию.
  * ponytail: наивный проход до 366 дней назад; upgrade — кешировать серию, если станет узким местом.
  */
 export function getStreak(habit: Habit): number {
   if (habit.days.length === 0) return 0
   const done = new Set(completions[habit.id] ?? [])
+  const frozen = new Set(freezes[habit.id] ?? [])
+  const createdKey = dateKey(new Date(habit.createdAt))
   const d = new Date()
   let streak = 0
   for (let i = 0; i < 366; i++) {
+    const key = dateKey(d)
+    if (key < createdKey) break // до создания привычки серии нет
     if (habit.days.includes(weekDayOf(d))) {
-      if (done.has(dateKey(d))) streak++
-      else if (i !== 0) break
+      if (done.has(key)) streak++
+      else if (i !== 0 && !frozen.has(key)) break // не заморожен → серия рвётся
     }
     d.setDate(d.getDate() - 1)
   }
   return streak
+}
+
+/** Сколько заморозок осталось в текущем месяце (общий лимит на все привычки). */
+export function freezesLeftThisMonth(): number {
+  return Math.max(0, freezeLimit - freezesUsedInMonth(dateKey().slice(0, 7)))
 }
