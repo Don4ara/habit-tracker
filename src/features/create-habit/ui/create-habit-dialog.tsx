@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { Check, Plus, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/shared/ui/button"
@@ -21,12 +22,13 @@ import { Field, FieldError, FieldLabel } from "@/shared/ui/field"
 import {
   addHabit,
   updateHabit,
+  useAllHabits,
   type Habit,
   type WeekDay,
   type WeekDayOption,
 } from "@/entities/habit"
 
-const categories = ["Здоровье", "Спорт", "Учёба", "Чтение"]
+const defaultCategories = ["Здоровье", "Спорт", "Учёба", "Чтение"]
 
 const weekDays: WeekDayOption[] = [
   { id: "mon", label: "Пн" },
@@ -82,11 +84,39 @@ export function CreateHabitDialog({
   const open = openProp ?? openState
   const setOpen = (v: boolean) =>
     setOpenProp ? setOpenProp(v) : setOpenState(v)
+  const allHabits = useAllHabits()
   const [icon, setIcon] = useState(habit?.icon ?? "")
-  const [category, setCategory] = useState(habit?.category ?? categories[0])
+  const [category, setCategory] = useState(habit?.category ?? defaultCategories[0])
+  const [addedCats, setAddedCats] = useState<string[]>([])
+  const [newCat, setNewCat] = useState("")
+  const [adding, setAdding] = useState(false)
   const [days, setDays] = useState<Set<WeekDay>>(
     new Set(habit?.days ?? weekDays.map((d) => d.id))
   )
+
+  // Дефолтные ∪ существующие ∪ добавленные ∪ выбранная — без дублей.
+  const categories = [
+    ...new Set([
+      ...defaultCategories,
+      ...allHabits.map((h) => h.category),
+      ...addedCats,
+      category,
+    ]),
+  ]
+
+  const addCategory = () => {
+    const trimmed = newCat.trim()
+    if (!trimmed) return
+    if (!categories.includes(trimmed)) setAddedCats((prev) => [...prev, trimmed])
+    setCategory(trimmed)
+    setNewCat("")
+    setAdding(false)
+  }
+
+  const removeCategory = (c: string) => {
+    setAddedCats((prev) => prev.filter((x) => x !== c))
+    if (category === c) setCategory(defaultCategories[0])
+  }
 
   const {
     register,
@@ -104,7 +134,10 @@ export function CreateHabitDialog({
     if (next) {
       reset({ name: habit?.name ?? "" })
       setIcon(habit?.icon ?? "")
-      setCategory(habit?.category ?? categories[0])
+      setCategory(habit?.category ?? defaultCategories[0])
+      setAddedCats([])
+      setNewCat("")
+      setAdding(false)
       setDays(new Set(habit?.days ?? weekDays.map((d) => d.id)))
     }
     setOpen(next)
@@ -158,12 +191,91 @@ export function CreateHabitDialog({
 
           <div className="grid gap-2">
             <Label>Категория</Label>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((c) => (
-                <Pill key={c} active={category === c} onClick={() => setCategory(c)}>
-                  {c}
-                </Pill>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              {categories.map((c) => {
+                const active = category === c
+                const removable = addedCats.includes(c)
+                return (
+                  <Button
+                    key={c}
+                    type="button"
+                    size="sm"
+                    variant={active ? "default" : "secondary"}
+                    aria-pressed={active}
+                    onClick={() => setCategory(c)}
+                    className={removable ? "pr-1" : undefined}
+                  >
+                    {c}
+                    {removable && (
+                      <span
+                        role="button"
+                        aria-label={`Удалить категорию ${c}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeCategory(c)
+                        }}
+                        className="ml-1 inline-flex rounded-sm p-0.5 hover:bg-black/10 dark:hover:bg-white/20"
+                      >
+                        <X className="size-3" />
+                      </span>
+                    )}
+                  </Button>
+                )
+              })}
+
+              {adding ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={newCat}
+                    onChange={(e) => setNewCat(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        addCategory()
+                      } else if (e.key === "Escape") {
+                        e.preventDefault()
+                        setNewCat("")
+                        setAdding(false)
+                      }
+                    }}
+                    placeholder="Название"
+                    autoFocus
+                    className="h-8 w-40"
+                  />
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="secondary"
+                    aria-label="Добавить категорию"
+                    onClick={addCategory}
+                    disabled={!newCat.trim()}
+                  >
+                    <Check className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label="Отмена"
+                    onClick={() => {
+                      setNewCat("")
+                      setAdding(false)
+                    }}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="outline"
+                  aria-label="Добавить категорию"
+                  onClick={() => setAdding(true)}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              )}
             </div>
           </div>
 

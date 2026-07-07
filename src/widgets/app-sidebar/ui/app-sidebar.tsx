@@ -1,12 +1,13 @@
 "use client"
 
 import * as React from "react"
+import { useLocation } from "react-router-dom"
 
 import { CreateHabitDialog } from "@/features/create-habit"
 import { ThemeToggle } from "@/features/theme-toggle"
+import { useAllHabits } from "@/entities/habit"
 import { NavMain } from "./nav-main"
 import { NavProjects } from "./nav-projects"
-import { NavUser } from "./nav-user"
 import { TeamSwitcher } from "./team-switcher"
 import {
   Sidebar,
@@ -19,6 +20,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/shared/ui/sidebar"
 import {
   PlusCircleIcon,
@@ -26,18 +28,10 @@ import {
   ListChecksIcon,
   BarChart3Icon,
   Settings2Icon,
-  HeartPulseIcon,
-  DumbbellIcon,
-  BookOpenIcon,
   TrophyIcon,
 } from "lucide-react"
 
 const data = {
-  user: {
-    name: "Иван Петров",
-    email: "ivan@example.com",
-    avatar: "/avatars/ivan.jpg",
-  },
   navMain: [
     { title: "Главная", to: "/", icon: <HomeIcon /> },
     { title: "Привычки", to: "/habits", icon: <ListChecksIcon /> },
@@ -45,26 +39,20 @@ const data = {
     { title: "Достижения", to: "/achievements", icon: <TrophyIcon /> },
     { title: "Настройки", to: "/settings", icon: <Settings2Icon /> },
   ],
-  projects: [
-    {
-      name: "Здоровье",
-      url: "#",
-      icon: <HeartPulseIcon />,
-    },
-    {
-      name: "Спорт",
-      url: "#",
-      icon: <DumbbellIcon />,
-    },
-    {
-      name: "Учёба",
-      url: "#",
-      icon: <BookOpenIcon />,
-    },
-  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const habits = useAllHabits()
+  const categories = [...new Set(habits.map((h) => h.category))]
+  const { isMobile, setOpenMobile } = useSidebar()
+  const location = useLocation()
+
+  // Закрываем мобильный сайдбар ПОСЛЕ смены маршрута — новая страница уже отрисована.
+  React.useEffect(() => {
+    if (isMobile) setOpenMobile(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search])
+
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
       <SidebarHeader>
@@ -88,11 +76,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupContent>
         </SidebarGroup>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavProjects categories={categories} />
       </SidebarContent>
       <SidebarFooter>
         <ThemeToggle />
-        <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
