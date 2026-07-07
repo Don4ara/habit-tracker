@@ -4,6 +4,38 @@
 
 🔗 **[Открыть приложение](https://don4ara.github.io/habit-tracker/)**
 
+## Локальная разработка
+
+Нужен Node.js 20+ (разработка велась на 22) и npm.
+
+```bash
+git clone https://github.com/don4ara/habit-tracker.git
+cd habit-tracker
+npm install      
+npm run dev     
+```
+
+Остальные команды:
+
+```bash
+npm run build   
+npm run preview  
+npm run lint     
+```
+
+## Запуск в Docker
+
+Node собирает статику и раздаёт её через `vite preview` (SPA-фолбэк из коробки).
+В контейнере база переопределяется на `/` вместо `/habit-tracker/`.
+
+```bash
+docker build -t habit-tracker .
+docker run -d -p 8080:80 habit-tracker   # http://localhost:8080
+```
+
+Файлы: `Dockerfile`, `.dockerignore`.
+
+
 ## Возможности
 
 - **Привычки** — создание с эмодзи, категорией и расписанием по дням недели; редактирование, архив, удаление с отменой.
@@ -39,15 +71,6 @@ src/
   shared/     — ui-компоненты, утилиты, хуки
 ```
 
-## Запуск
-
-```bash
-npm install
-npm run dev      # дев-сервер
-npm run build    # прод-сборка (tsc + vite)
-npm run preview  # предпросмотр сборки
-npm run lint     # eslint
-```
 
 ## Деплой
 
