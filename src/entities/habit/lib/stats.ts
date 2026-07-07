@@ -3,10 +3,21 @@ import type { Habit } from "../model/types"
 
 type Completions = Record<string, string[]>
 
+/**
+ * Активна ли привычка в этот день: подходит по дню недели И день не раньше
+ * её создания. Без проверки createdAt новая привычка задним числом «портила»
+ * прошлые дни (считалась запланированной, но не выполненной).
+ */
+export function activeOn(habit: Habit, date: Date): boolean {
+  return (
+    habit.days.includes(weekDayOf(date)) &&
+    dateKey(date) >= dateKey(new Date(habit.createdAt))
+  )
+}
+
 /** Привычки, запланированные на конкретную дату. */
 export function scheduledOn(habits: Habit[], date: Date): Habit[] {
-  const wd = weekDayOf(date)
-  return habits.filter((h) => h.days.includes(wd))
+  return habits.filter((h) => activeOn(h, date))
 }
 
 /** Доля выполнения за конкретный день: done / scheduled (0..1, null — нечего было делать). */
@@ -32,10 +43,9 @@ export function completionRate(
   let total = 0
   const d = new Date()
   for (let i = 0; i < days; i++) {
-    const wd = weekDayOf(d)
     const key = dateKey(d)
     for (const h of habits) {
-      if (h.days.includes(wd)) {
+      if (activeOn(h, d)) {
         total++
         if (completions[h.id]?.includes(key)) done++
       }
@@ -56,7 +66,7 @@ export function habitRate(
   let total = 0
   const d = new Date()
   for (let i = 0; i < days; i++) {
-    if (habit.days.includes(weekDayOf(d))) {
+    if (activeOn(habit, d)) {
       total++
       if (completions[habit.id]?.includes(dateKey(d))) done++
     }
@@ -83,7 +93,7 @@ export function bestStreak(
   let best = 0
   let run = 0
   for (let i = 0; i < lookbackDays; i++) {
-    if (habit.days.includes(weekDayOf(d))) {
+    if (activeOn(habit, d)) {
       if (done.has(dateKey(d))) {
         run++
         best = Math.max(best, run)
@@ -123,7 +133,7 @@ export function habitHeatmap(
     const key = dateKey(d)
     cells.push({
       key,
-      scheduled: habit.days.includes(weekDayOf(d)),
+      scheduled: activeOn(habit, d),
       done: done.has(key),
       future: d > today,
     })
@@ -142,11 +152,10 @@ export function dailySeries(
   d.setDate(d.getDate() - (days - 1))
   for (let i = 0; i < days; i++) {
     const key = dateKey(d)
-    const wd = weekDayOf(d)
     let scheduled = 0
     let done = 0
     for (const h of habits) {
-      if (h.days.includes(wd)) {
+      if (activeOn(h, d)) {
         scheduled++
         if (completions[h.id]?.includes(key)) done++
       }
