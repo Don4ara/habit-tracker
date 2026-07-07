@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { EmojiPicker } from "frimousse"
 import { toast } from "sonner"
 
 import { Button } from "@/shared/ui/button"
@@ -17,7 +16,7 @@ import {
 } from "@/shared/ui/dialog"
 import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover"
+import { EmojiButton } from "@/shared/ui/emoji-button"
 import { Field, FieldError, FieldLabel } from "@/shared/ui/field"
 import {
   addHabit,
@@ -64,69 +63,6 @@ function Pill({
     >
       {children}
     </Button>
-  )
-}
-
-function EmojiButton({
-  value,
-  onSelect,
-}: {
-  value: string
-  onSelect: (emoji: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="icon" aria-label="Выбрать эмодзи">
-          {value || "+"}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-fit p-0">
-        <EmojiPicker.Root
-          locale="ru"
-          onEmojiSelect={({ emoji }) => {
-            onSelect(emoji)
-            setOpen(false)
-          }}
-          className="flex h-80 w-72 flex-col"
-        >
-          <EmojiPicker.Search
-            placeholder="Поиск эмодзи…"
-            className="m-2 rounded-md border bg-transparent px-2 py-1.5 text-sm outline-none"
-          />
-          <EmojiPicker.Viewport className="flex-1 overflow-y-auto px-2 pb-2">
-            <EmojiPicker.Loading className="p-4 text-sm text-muted-foreground">
-              Загрузка…
-            </EmojiPicker.Loading>
-            <EmojiPicker.Empty className="p-4 text-sm text-muted-foreground">
-              Ничего не найдено
-            </EmojiPicker.Empty>
-            <EmojiPicker.List
-              components={{
-                CategoryHeader: ({ category, ...props }) => (
-                  <div
-                    className="bg-popover py-1.5 text-xs font-medium text-muted-foreground"
-                    {...props}
-                  >
-                    {category.label}
-                  </div>
-                ),
-                Emoji: ({ emoji, ...props }) => (
-                  <button
-                    className="flex size-8 items-center justify-center rounded-md text-lg data-[active]:bg-accent"
-                    {...props}
-                  >
-                    {emoji.emoji}
-                  </button>
-                ),
-              }}
-            />
-          </EmojiPicker.Viewport>
-        </EmojiPicker.Root>
-      </PopoverContent>
-    </Popover>
   )
 }
 

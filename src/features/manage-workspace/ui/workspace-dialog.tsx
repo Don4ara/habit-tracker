@@ -17,6 +17,7 @@ import {
 } from "@/shared/ui/dialog"
 import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
+import { EmojiButton } from "@/shared/ui/emoji-button"
 
 // Родитель задаёт key при открытии — компонент монтируется с чистым состоянием.
 export function WorkspaceDialog({
@@ -64,13 +65,7 @@ export function WorkspaceDialog({
           <div className="grid gap-2">
             <Label htmlFor="ws-name">Название</Label>
             <div className="flex gap-2">
-              <Input
-                aria-label="Эмодзи"
-                value={icon}
-                onChange={(e) => setIcon(e.target.value.slice(0, 2))}
-                placeholder="🏠"
-                className="w-14 text-center"
-              />
+              <EmojiButton value={icon} onSelect={setIcon} />
               <Input
                 id="ws-name"
                 value={name}
