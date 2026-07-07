@@ -8,8 +8,8 @@ import {
   completionRate,
   habitRate,
   totalCompletions,
-  dailyCounts,
 } from "@/entities/habit"
+import { ActivityChart } from "@/widgets/activity-chart"
 import { PageBody, PageHeader } from "@/widgets/page-header"
 import {
   Empty,
@@ -50,21 +50,19 @@ export function StatsPage() {
 
   const total = totalCompletions(completions)
 
-  // Тяжёлые агрегаты и ряды — пересчёт только при смене данных.
-  const { rate30, bestStreak, counts, perHabit } = useMemo(() => {
-    const counts = dailyCounts(completions, 14)
-    return {
+  // Тяжёлые агрегаты — пересчёт только при смене данных.
+  const { rate30, bestStreak, perHabit } = useMemo(
+    () => ({
       rate30: completionRate(habits, completions, 30),
       bestStreak: habits.reduce((m, h) => Math.max(m, getStreak(h)), 0),
-      counts,
       perHabit: habits.map((h) => ({
         habit: h,
         rate: habitRate(h, completions, 30),
         streak: getStreak(h),
       })),
-    }
-  }, [habits, completions])
-  const maxCount = Math.max(1, ...counts.map((c) => c.count))
+    }),
+    [habits, completions]
+  )
 
   return (
     <>
@@ -111,31 +109,8 @@ export function StatsPage() {
               />
             </div>
 
-            {/* Активность за 14 дней */}
-            <div className="flex flex-col gap-3 rounded-xl border p-4">
-              <h2 className="font-heading text-sm font-medium tracking-tight">
-                Активность за 14 дней
-              </h2>
-              <div className="flex h-32 items-end gap-1.5">
-                {counts.map((c) => (
-                  <div
-                    key={c.key}
-                    className="flex flex-1 flex-col items-center gap-1"
-                    title={`${c.key}: ${c.count}`}
-                  >
-                    <div className="flex w-full flex-1 items-end">
-                      <div
-                        className="bg-primary/80 w-full rounded-t transition-[height] duration-500"
-                        style={{ height: `${(c.count / maxCount) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-muted-foreground text-[10px] tabular-nums">
-                      {c.key.slice(8)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Активность */}
+            <ActivityChart />
 
             {/* По привычкам */}
             <div className="flex flex-col gap-3">

@@ -25,5 +25,6 @@ export {
   habitHeatmap,
   totalCompletions,
   dailyCounts,
+  dailySeries,
 } from "./lib/stats"
 export type { Habit, WeekDay, WeekDayOption } from "./model/types"

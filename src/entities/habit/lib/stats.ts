@@ -131,6 +131,32 @@ export function habitHeatmap(
   return cells
 }
 
+/** По дням за последние `days`: выполнено и запланировано (старые → новые). */
+export function dailySeries(
+  habits: Habit[],
+  completions: Completions,
+  days: number
+): { date: string; done: number; scheduled: number }[] {
+  const out: { date: string; done: number; scheduled: number }[] = []
+  const d = new Date()
+  d.setDate(d.getDate() - (days - 1))
+  for (let i = 0; i < days; i++) {
+    const key = dateKey(d)
+    const wd = weekDayOf(d)
+    let scheduled = 0
+    let done = 0
+    for (const h of habits) {
+      if (h.days.includes(wd)) {
+        scheduled++
+        if (completions[h.id]?.includes(key)) done++
+      }
+    }
+    out.push({ date: key, done, scheduled })
+    d.setDate(d.getDate() + 1)
+  }
+  return out
+}
+
 /** Количество выполненных отметок за каждый из последних `days` дней (старые → новые). */
 export function dailyCounts(
   completions: Completions,
