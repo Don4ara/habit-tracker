@@ -1,16 +1,23 @@
 import { useSyncExternalStore } from "react"
 
+import {
+  getActiveWorkspaceId,
+  setActiveWorkspaceId,
+  subscribeActiveWorkspace,
+} from "@/shared/lib"
+
 import type { Workspace } from "./types"
 
 const WORKSPACES_KEY = "workspaces"
-const ACTIVE_KEY = "active-workspace"
 
 const DEFAULT: Workspace = { id: "personal", name: "Личный", icon: "🏠" }
 
 let workspaces: Workspace[] = load()
-let activeId: string = loadActive()
 const listeners = new Set<() => void>()
-const activeListeners = new Set<(id: string) => void>()
+
+// Активный id хранится в shared — валидируем его против списка при старте.
+if (!workspaces.some((w) => w.id === getActiveWorkspaceId()))
+  setActiveWorkspaceId(workspaces[0].id)
 
 function load(): Workspace[] {
   try {
@@ -22,14 +29,8 @@ function load(): Workspace[] {
   return [DEFAULT]
 }
 
-function loadActive(): string {
-  const saved = localStorage.getItem(ACTIVE_KEY)
-  return workspaces.some((w) => w.id === saved) ? saved! : workspaces[0].id
-}
-
 function persist() {
   localStorage.setItem(WORKSPACES_KEY, JSON.stringify(workspaces))
-  localStorage.setItem(ACTIVE_KEY, activeId)
   listeners.forEach((l) => l())
 }
 
@@ -43,24 +44,12 @@ export function useWorkspaces(): Workspace[] {
 }
 
 export function useActiveWorkspaceId(): string {
-  return useSyncExternalStore(subscribe, () => activeId)
-}
-
-export function getActiveWorkspaceId(): string {
-  return activeId
-}
-
-/** Подписка для habit-стора: перезагрузка данных при смене активного пространства. */
-export function subscribeActiveWorkspace(cb: (id: string) => void) {
-  activeListeners.add(cb)
-  return () => activeListeners.delete(cb)
+  return useSyncExternalStore(subscribeActiveWorkspace, getActiveWorkspaceId)
 }
 
 export function setActiveWorkspace(id: string) {
-  if (id === activeId || !workspaces.some((w) => w.id === id)) return
-  activeId = id
-  activeListeners.forEach((l) => l(activeId))
-  persist()
+  if (!workspaces.some((w) => w.id === id)) return
+  setActiveWorkspaceId(id)
 }
 
 const genId = () =>
@@ -72,7 +61,8 @@ const genId = () =>
 export function addWorkspace(name: string, icon?: string): Workspace {
   const ws: Workspace = { id: genId(), name: name.trim(), icon }
   workspaces = [...workspaces, ws]
-  setActiveWorkspace(ws.id) // persist внутри
+  persist()
+  setActiveWorkspaceId(ws.id)
   return ws
 }
 
@@ -92,9 +82,8 @@ export function removeWorkspace(id: string) {
   workspaces = workspaces.filter((w) => w.id !== id)
   localStorage.removeItem(`habits:${id}`)
   localStorage.removeItem(`habit-completions:${id}`)
-  if (activeId === id) {
-    activeId = workspaces[0].id
-    activeListeners.forEach((l) => l(activeId))
-  }
+  localStorage.removeItem(`habit-notes:${id}`)
+  localStorage.removeItem(`habit-freezes:${id}`)
   persist()
+  if (getActiveWorkspaceId() === id) setActiveWorkspaceId(workspaces[0].id)
 }

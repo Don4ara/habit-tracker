@@ -1,9 +1,6 @@
 import { useSyncExternalStore } from "react"
 
-import {
-  getActiveWorkspaceId,
-  subscribeActiveWorkspace,
-} from "@/entities/workspace"
+import { getActiveWorkspaceId, subscribeActiveWorkspace } from "@/shared/lib"
 
 import type { Habit, WeekDay } from "./types"
 

@@ -1,8 +1,6 @@
 export {
   useWorkspaces,
   useActiveWorkspaceId,
-  getActiveWorkspaceId,
-  subscribeActiveWorkspace,
   setActiveWorkspace,
   addWorkspace,
   renameWorkspace,
