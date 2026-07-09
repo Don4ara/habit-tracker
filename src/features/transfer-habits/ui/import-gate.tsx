@@ -23,7 +23,7 @@ interface Incoming {
 }
 
 function stripParam() {
-  history.replaceState(null, "", location.pathname + location.hash)
+  history.replaceState(null, "", location.pathname)
 }
 
 export function ImportGate() {
@@ -31,7 +31,9 @@ export function ImportGate() {
   const [incoming, setIncoming] = useState<Incoming | null>(null)
 
   useEffect(() => {
-    const payload = new URLSearchParams(location.search).get("import")
+    const payload =
+      new URLSearchParams(location.hash.slice(1)).get("import") ??
+      new URLSearchParams(location.search).get("import")
     if (!payload) return
     let cancelled = false
     ;(async () => {

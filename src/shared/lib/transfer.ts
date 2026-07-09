@@ -47,5 +47,5 @@ export async function decodePayload(payload: string): Promise<string> {
 }
 
 export function buildTransferUrl(payload: string): string {
-  return `${location.origin}${import.meta.env.BASE_URL}?import=${payload}`
+  return `${location.origin}${import.meta.env.BASE_URL}#import=${payload}`
 }
