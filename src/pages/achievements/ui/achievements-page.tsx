@@ -97,28 +97,43 @@ function ChallengeCard({
   return (
     <div
       className={cn(
-        "rounded-xl border-2 p-4 transition-colors",
+        "flex items-center gap-3 rounded-xl border-2 p-3 transition-colors",
         complete
           ? "border-amber-400/60 bg-amber-400/10"
           : "border-amber-400/40 bg-amber-400/5"
       )}
     >
-      <div className="flex items-center gap-3">
-        <div className="grid size-11 shrink-0 place-content-center rounded-lg bg-amber-400/20 text-xl text-amber-600 dark:text-amber-400">
-          {challenge.icon || <Swords className="size-5" />}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            {challenge.title}
-            <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-              Челлендж
+      <div className="grid size-10 shrink-0 place-content-center rounded-lg bg-amber-400/20 text-lg text-amber-600 dark:text-amber-400">
+        {challenge.icon || <Swords className="size-5" />}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium">{challenge.title}</span>
+          {complete ? (
+            <span className="ml-auto flex shrink-0 items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <PartyPopper className="size-3.5" />
+              Пройден
             </span>
-          </div>
-          <div className="text-muted-foreground text-xs">
-            {challenge.by ? `Вызов от ${challenge.by}` : "Совместная цель"} ·{" "}
-            {challenge.goal} дней
-          </div>
+          ) : (
+            <span className="text-muted-foreground ml-auto shrink-0 text-xs tabular-nums">
+              {progress}/{challenge.goal}
+            </span>
+          )}
         </div>
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-amber-400 transition-[width] duration-500"
+            style={{ width: `${(progress / challenge.goal) * 100}%` }}
+          />
+        </div>
+        <div className="text-muted-foreground mt-1 truncate text-xs">
+          {challenge.by ? `Вызов от ${challenge.by}` : "Совместная цель"} ·{" "}
+          {challenge.goal} дней
+        </div>
+      </div>
+
+      <div className="flex shrink-0 flex-col">
         <ShareChallengeDialog
           challenge={challenge}
           trigger={
@@ -135,31 +150,6 @@ function ChallengeCard({
         >
           <Trash2 className="size-4" />
         </Button>
-      </div>
-
-      <div className="mt-3 flex items-center gap-2">
-        <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
-          <div
-            className="h-full rounded-full bg-amber-400 transition-[width] duration-500"
-            style={{ width: `${(progress / challenge.goal) * 100}%` }}
-          />
-        </div>
-        <span className="text-muted-foreground text-xs tabular-nums">
-          {progress}/{challenge.goal}
-        </span>
-      </div>
-
-      <div className="mt-3 text-center text-xs">
-        {complete ? (
-          <span className="flex items-center justify-center gap-2 font-medium text-amber-600 dark:text-amber-400">
-            <PartyPopper className="size-4" />
-            Челлендж пройден!
-          </span>
-        ) : (
-          <span className="text-muted-foreground">
-            Осталось {challenge.goal - progress} отметок
-          </span>
-        )}
       </div>
     </div>
   )
@@ -229,7 +219,7 @@ export function AchievementsPage() {
               <Swords className="text-primary size-5" />
               Челленджи с друзьями
             </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
               {challenges.map((c) => (
                 <ChallengeCard
                   key={c.id}
