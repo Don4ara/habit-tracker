@@ -217,16 +217,14 @@ const genId = () =>
     ? crypto.randomUUID()
     : Date.now().toString(36) + Math.random().toString(36).slice(2)
 
-/** Возвращает false, если привычка с таким названием уже существует. */
-export function addHabit(data: Omit<Habit, "id" | "createdAt">): boolean {
+/** Создаёт привычку. Возвращает её, либо null если название уже занято. */
+export function addHabit(data: Omit<Habit, "id" | "createdAt">): Habit | null {
   const name = data.name.trim().toLowerCase()
-  if (habits.some((h) => h.name.trim().toLowerCase() === name)) return false
-  habits = [
-    ...habits,
-    { ...data, id: genId(), createdAt: new Date().toISOString() },
-  ]
+  if (habits.some((h) => h.name.trim().toLowerCase() === name)) return null
+  const habit: Habit = { ...data, id: genId(), createdAt: new Date().toISOString() }
+  habits = [...habits, habit]
   emit()
-  return true
+  return habit
 }
 
 /** Обновляет привычку. false — если новое имя занято другой привычкой. */
