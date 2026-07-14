@@ -12,6 +12,9 @@ const nKey = () => `habit-notes:${getActiveWorkspaceId()}`
 // Заморозки: `habit-freezes:<wsId>` = { habitId: [dateKey,...] } — дни, где пропуск не рвёт серию.
 const fKey = () => `habit-freezes:${getActiveWorkspaceId()}`
 const FREEZE_LIMIT_KEY = "freeze-limit"
+// Блокировка заморозок до даты (ISO). Под замком нельзя добавлять заморозки и
+// повышать лимит — чтобы не подкручивать себе поблажки во время челленджа.
+const FREEZE_LOCK_KEY = "freeze-lock-until"
 
 // Разовая миграция старых глобальных ключей в пространство "personal".
 function migrateLegacy() {
@@ -33,6 +36,7 @@ let completions: Record<string, string[]> = loadCompletions()
 let notes: Notes = loadNotes()
 let freezes: Record<string, string[]> = loadFreezes()
 let freezeLimit: number = loadFreezeLimit()
+let freezeLockUntil: string = localStorage.getItem(FREEZE_LOCK_KEY) ?? ""
 // Кэш активных (неархивных) привычек — стабильная ссылка для useSyncExternalStore.
 let activeHabits: Habit[] = computeActive()
 const listeners = new Set<() => void>()
@@ -148,9 +152,40 @@ export function getFreezeLimit(): number {
   return freezeLimit
 }
 
+export function useFreezeLock(): string {
+  return useSyncExternalStore(subscribe, () => freezeLockUntil)
+}
+
+/** Заблокированы ли заморозки прямо сейчас (дата блокировки ещё не прошла). */
+export function isFreezeLocked(): boolean {
+  return !!freezeLockUntil && new Date(freezeLockUntil).getTime() > Date.now()
+}
+
+/**
+ * Блокирует заморозки до указанной даты (ISO). Можно только продлить блокировку,
+ * не сократить — иначе смысл теряется. Возвращает false, если дата невалидна или
+ * не позже текущего замка/сейчас.
+ */
+export function lockFreezesUntil(dateIso: string): boolean {
+  const target = new Date(dateIso).getTime()
+  if (!Number.isFinite(target)) return false
+  const floor = Math.max(
+    Date.now(),
+    freezeLockUntil ? new Date(freezeLockUntil).getTime() : 0
+  )
+  if (target <= floor) return false
+  freezeLockUntil = dateIso
+  localStorage.setItem(FREEZE_LOCK_KEY, dateIso)
+  notify()
+  return true
+}
+
 /** Меняет лимит заморозок на месяц (глобально для всех пространств). */
 export function setFreezeLimit(n: number) {
-  freezeLimit = Math.max(0, Math.floor(n))
+  const next = Math.max(0, Math.floor(n))
+  // Под блокировкой лимит нельзя менять вообще — ни вверх, ни вниз.
+  if (isFreezeLocked()) return
+  freezeLimit = next
   localStorage.setItem(FREEZE_LIMIT_KEY, String(freezeLimit))
   notify()
 }
@@ -181,6 +216,7 @@ export function toggleFreeze(id: string, key = dateKey()): boolean {
     emitFreezes()
     return true
   }
+  if (isFreezeLocked()) return false // под блокировкой новые заморозки нельзя
   if (freezesUsedInMonth(key.slice(0, 7)) >= freezeLimit) return false
   freezes = { ...freezes, [id]: [...list, key] }
   emitFreezes()

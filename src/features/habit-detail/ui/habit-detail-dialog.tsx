@@ -9,6 +9,8 @@ import {
   setNote,
   useFreezes,
   useFreezeLimit,
+  useFreezeLock,
+  isFreezeLocked,
   isFrozen,
   toggleFreeze,
   getStreak,
@@ -81,27 +83,36 @@ function FreezeControl({ habit }: { habit: Habit }) {
   const todayKey = dateKey()
   useFreezes() // ре-рендер при смене заморозок
   const limit = useFreezeLimit()
+  useFreezeLock() // ре-рендер при смене блокировки
+  const locked = isFreezeLocked()
   const frozen = isFrozen(habit.id, todayKey)
   const left = freezesLeftThisMonth()
 
   const onClick = () => {
     const ok = toggleFreeze(habit.id, todayKey)
-    if (!ok) toast.error(`Лимит заморозок на месяц исчерпан (${limit})`)
-    else if (!frozen) toast.success("День заморожен — пропуск не разорвёт серию")
+    if (ok) {
+      if (!frozen) toast.success("День заморожен — пропуск не разорвёт серию")
+    } else if (locked) {
+      toast.error("Заморозки заблокированы — снять нельзя до окончания срока")
+    } else {
+      toast.error(`Лимит заморозок на месяц исчерпан (${limit})`)
+    }
   }
 
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
         <Snowflake className="size-3.5 text-blue-500" />
-        Заморозки в этом месяце: {left} из {limit}
+        {locked
+          ? "Заморозки заблокированы"
+          : `Заморозки в этом месяце: ${left} из ${limit}`}
       </div>
       <Button
         type="button"
         size="sm"
         variant="outline"
         onClick={onClick}
-        disabled={!frozen && left === 0}
+        disabled={(!frozen && left === 0) || (!frozen && locked)}
         className={cn(
           "border-blue-500/40 text-blue-600 hover:bg-blue-500/10 hover:text-blue-600 dark:text-blue-400",
           frozen && "bg-blue-500/15"

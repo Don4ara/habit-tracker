@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { Download, Minus, MoonIcon, Plus, QrCode, Snowflake, SunIcon, Swords, Trash2, Upload } from "lucide-react"
+import { Download, Lock, Minus, MoonIcon, Plus, QrCode, Snowflake, SunIcon, Swords, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -8,6 +8,9 @@ import {
   clearAll,
   useFreezeLimit,
   setFreezeLimit,
+  useFreezeLock,
+  isFreezeLocked,
+  lockFreezesUntil,
 } from "@/entities/habit"
 import { TransferDialog } from "@/features/transfer-habits"
 import { CreateChallengeDialog } from "@/features/manage-challenge"
@@ -40,8 +43,25 @@ export function SettingsPage() {
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === "dark"
   const freezeLimit = useFreezeLimit()
+  const lockUntil = useFreezeLock()
+  const locked = isFreezeLocked()
+  const [lockDate, setLockDate] = useState("")
   const fileRef = useRef<HTMLInputElement>(null)
   const [confirmClear, setConfirmClear] = useState(false)
+
+  const today = new Date().toISOString().slice(0, 10)
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("ru-RU")
+
+  const applyLock = () => {
+    if (!lockDate) return
+    const iso = new Date(`${lockDate}T23:59:59`).toISOString()
+    if (lockFreezesUntil(iso)) {
+      toast.success(`Заморозки заблокированы до ${fmtDate(iso)}`)
+      setLockDate("")
+    } else {
+      toast.error("Дата должна быть позже текущей блокировки")
+    }
+  }
 
   const handleExport = () => {
     const blob = new Blob([exportData()], { type: "application/json" })
@@ -109,7 +129,7 @@ export function SettingsPage() {
                   size="icon-sm"
                   aria-label="Меньше"
                   onClick={() => setFreezeLimit(freezeLimit - 1)}
-                  disabled={freezeLimit <= 0}
+                  disabled={freezeLimit <= 0 || locked}
                 >
                   <Minus className="size-4" />
                 </Button>
@@ -122,10 +142,42 @@ export function SettingsPage() {
                   size="icon-sm"
                   aria-label="Больше"
                   onClick={() => setFreezeLimit(freezeLimit + 1)}
+                  disabled={locked}
                 >
                   <Plus className="size-4" />
                 </Button>
               </div>
+            }
+          />
+          <Row
+            title="Блокировка заморозок"
+            description="Пока действует, нельзя ставить заморозки и повышать лимит — чтобы честно пройти челлендж. Снять раньше срока нельзя, только продлить."
+            action={
+              locked ? (
+                <span className="flex items-center gap-1.5 text-sm font-medium text-amber-600 dark:text-amber-400">
+                  <Lock className="size-4" />
+                  До {fmtDate(lockUntil)}
+                </span>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    min={today}
+                    value={lockDate}
+                    onChange={(e) => setLockDate(e.target.value)}
+                    className="border-input bg-transparent h-8 rounded-md border px-2 text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={applyLock}
+                    disabled={!lockDate}
+                  >
+                    <Lock className="size-4" />
+                    Заблокировать
+                  </Button>
+                </div>
+              )
             }
           />
         </div>
