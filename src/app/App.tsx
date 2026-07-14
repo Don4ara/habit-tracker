@@ -9,6 +9,7 @@ import { SettingsPage } from "@/pages/settings"
 import { AppSidebar } from "@/widgets/app-sidebar"
 import { ImportGate } from "@/features/transfer-habits"
 import { OnboardingGate } from "@/features/onboarding"
+import { ChallengeGate } from "@/features/manage-challenge"
 import { SidebarInset } from "@/shared/ui/sidebar"
 import { Toaster } from "@/shared/ui/sonner"
 import { IndexProvider } from "./providers"
@@ -47,6 +48,7 @@ export function App() {
       </SidebarInset>
       <Toaster />
       <ImportGate />
+      <ChallengeGate />
       <OnboardingGate />
     </IndexProvider>
   )

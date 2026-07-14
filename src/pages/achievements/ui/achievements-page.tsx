@@ -8,12 +8,16 @@ import {
   Layers,
   Medal,
   Mountain,
+  PartyPopper,
   Rocket,
   Shapes,
+  Share2,
   Sparkles,
   Star,
   Sunrise,
+  Swords,
   Target,
+  Trash2,
   TrendingUp,
   Trophy,
   Zap,
@@ -27,7 +31,10 @@ import {
   totalCompletions,
   dayRatio,
 } from "@/entities/habit"
+import { useChallenges, type Challenge } from "@/entities/challenge"
+import { ShareChallengeDialog, leaveChallenge } from "@/features/manage-challenge"
 import { PageBody, PageHeader } from "@/widgets/page-header"
+import { Button } from "@/shared/ui/button"
 import { cn } from "@/shared/lib/utils"
 
 type Metric =
@@ -75,9 +82,93 @@ const DEFS: AchievementDef[] = [
   { id: "hundred_days", title: "Постоянство", description: "100 активных дней", icon: <CalendarClock className="size-5" />, goal: 100, metric: "activeDays" },
 ]
 
+// Прогресс челленджа = число отметок связанной привычки. Отмечать можно только
+// на главной (золотая привычка) — здесь карточка только показывает счёт.
+function ChallengeCard({
+  challenge,
+  done,
+}: {
+  challenge: Challenge
+  done: number
+}) {
+  const progress = Math.min(done, challenge.goal)
+  const complete = progress >= challenge.goal
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border-2 p-4 transition-colors",
+        complete
+          ? "border-amber-400/60 bg-amber-400/10"
+          : "border-amber-400/40 bg-amber-400/5"
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <div className="grid size-11 shrink-0 place-content-center rounded-lg bg-amber-400/20 text-xl text-amber-600 dark:text-amber-400">
+          {challenge.icon || <Swords className="size-5" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            {challenge.title}
+            <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+              Челлендж
+            </span>
+          </div>
+          <div className="text-muted-foreground text-xs">
+            {challenge.by ? `Вызов от ${challenge.by}` : "Совместная цель"} ·{" "}
+            {challenge.goal} дней
+          </div>
+        </div>
+        <ShareChallengeDialog
+          challenge={challenge}
+          trigger={
+            <Button variant="ghost" size="icon-sm" aria-label="Позвать друга">
+              <Share2 className="size-4" />
+            </Button>
+          }
+        />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Покинуть челлендж"
+          onClick={() => leaveChallenge(challenge)}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+          <div
+            className="h-full rounded-full bg-amber-400 transition-[width] duration-500"
+            style={{ width: `${(progress / challenge.goal) * 100}%` }}
+          />
+        </div>
+        <span className="text-muted-foreground text-xs tabular-nums">
+          {progress}/{challenge.goal}
+        </span>
+      </div>
+
+      <div className="mt-3 text-center text-xs">
+        {complete ? (
+          <span className="flex items-center justify-center gap-2 font-medium text-amber-600 dark:text-amber-400">
+            <PartyPopper className="size-4" />
+            Челлендж пройден!
+          </span>
+        ) : (
+          <span className="text-muted-foreground">
+            Осталось {challenge.goal - progress} отметок
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function AchievementsPage() {
   const habits = useHabits()
   const completions = useCompletions()
+  const challenges = useChallenges()
 
   const total = totalCompletions(completions)
 
@@ -131,6 +222,24 @@ export function AchievementsPage() {
             </div>
           </div>
         </div>
+
+        {challenges.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <h2 className="font-heading flex items-center gap-2 text-lg font-semibold tracking-tight">
+              <Swords className="text-primary size-5" />
+              Челленджи с друзьями
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {challenges.map((c) => (
+                <ChallengeCard
+                  key={c.id}
+                  challenge={c}
+                  done={completions[c.habitId]?.length ?? 0}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <div>

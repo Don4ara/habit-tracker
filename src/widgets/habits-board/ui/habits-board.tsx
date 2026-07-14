@@ -13,6 +13,7 @@ import {
   Pencil,
   Search,
   Sparkles,
+  Swords,
   Trash2,
 } from "lucide-react"
 
@@ -33,6 +34,7 @@ import {
   type Habit,
   type WeekDay,
 } from "@/entities/habit"
+import { useChallenges } from "@/entities/challenge"
 import { CreateHabitDialog } from "@/features/create-habit"
 import { HabitDetailDialog } from "@/features/habit-detail"
 import { Button } from "@/shared/ui/button"
@@ -202,9 +204,11 @@ function HabitActions({ habit }: { habit: Habit }) {
 function HabitRow({
   habit,
   todayKey,
+  isChallenge = false,
 }: {
   habit: Habit
   todayKey: string
+  isChallenge?: boolean
 }) {
   const habitDone = useCompletions()[habit.id]
   const isDoneToday = habitDone?.includes(todayKey) ?? false
@@ -221,11 +225,14 @@ function HabitRow({
     <div
       className={cn(
         "group flex items-center gap-3 rounded-lg border p-3 transition-colors",
-        frozenOnly
-          ? "border-blue-500/50 bg-blue-500/5"
-          : isDoneToday
-            ? "bg-muted/40"
-            : "hover:bg-muted/50"
+        // Челлендж — золотой, приоритетнее обычных состояний.
+        isChallenge
+          ? "border-amber-400/50 bg-amber-400/5"
+          : frozenOnly
+            ? "border-blue-500/50 bg-blue-500/5"
+            : isDoneToday
+              ? "bg-muted/40"
+              : "hover:bg-muted/50"
       )}
     >
       <Checkbox
@@ -234,6 +241,8 @@ function HabitRow({
         onCheckedChange={() => toggleCompletion(habit.id, todayKey)}
         className={cn(
           "size-5",
+          isChallenge &&
+            "border-amber-400 data-[state=checked]:border-amber-400 data-[state=checked]:bg-amber-400 data-[state=checked]:text-white",
           frozenOnly &&
             "border-blue-500 text-white data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-500 data-[state=checked]:text-white"
         )}
@@ -245,17 +254,27 @@ function HabitRow({
             type="button"
             className="flex min-w-0 flex-1 items-center gap-3 text-left"
           >
-            <span className="grid size-9 shrink-0 place-content-center rounded-md bg-muted text-lg">
+            <span
+              className={cn(
+                "grid size-9 shrink-0 place-content-center rounded-md text-lg",
+                isChallenge
+                  ? "bg-amber-400/20 text-amber-600 dark:text-amber-400"
+                  : "bg-muted"
+              )}
+            >
               {habit.icon || habit.name.charAt(0).toUpperCase()}
             </span>
             <div className="min-w-0 flex-1">
               <div
                 className={cn(
-                  "truncate text-sm font-medium",
+                  "flex items-center gap-1.5 truncate text-sm font-medium",
                   shownDone && "text-muted-foreground line-through"
                 )}
               >
                 {habit.name}
+                {isChallenge && (
+                  <Swords className="size-3.5 shrink-0 text-amber-500" />
+                )}
               </div>
               <div className="text-muted-foreground truncate text-xs">
                 {habit.category}
@@ -442,6 +461,8 @@ export function HabitsBoard() {
   const habits = useHabits()
   const allHabits = useAllHabits()
   const completions = useCompletions()
+  const challenges = useChallenges()
+  const challengeIds = new Set(challenges.map((c) => c.habitId))
   const todayKey = dateKey()
   const todayWd = weekDayOf(new Date())
 
@@ -664,7 +685,12 @@ export function HabitsBoard() {
         ) : (
           <div className="flex flex-col gap-2">
             {todayHabits.map((h) => (
-              <HabitRow key={h.id} habit={h} todayKey={todayKey} />
+              <HabitRow
+                key={h.id}
+                habit={h}
+                todayKey={todayKey}
+                isChallenge={challengeIds.has(h.id)}
+              />
             ))}
           </div>
         )}

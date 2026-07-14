@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { Download, Minus, MoonIcon, Plus, QrCode, Snowflake, SunIcon, Trash2, Upload } from "lucide-react"
+import { Download, Minus, MoonIcon, Plus, QrCode, Snowflake, SunIcon, Swords, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -10,6 +10,7 @@ import {
   setFreezeLimit,
 } from "@/entities/habit"
 import { TransferDialog } from "@/features/transfer-habits"
+import { CreateChallengeDialog } from "@/features/manage-challenge"
 import { PageBody, PageHeader } from "@/widgets/page-header"
 import { Button } from "@/shared/ui/button"
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog"
@@ -125,6 +126,26 @@ export function SettingsPage() {
                   <Plus className="size-4" />
                 </Button>
               </div>
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <h2 className="font-heading text-lg font-semibold tracking-tight">
+            Челленджи
+          </h2>
+          <Row
+            title="Челлендж с другом"
+            description="Совместная цель на несколько дней — отправьте другу QR, соревнуйтесь. Появится в достижениях."
+            action={
+              <CreateChallengeDialog
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <Swords className="size-4" />
+                    Создать
+                  </Button>
+                }
+              />
             }
           />
         </div>
