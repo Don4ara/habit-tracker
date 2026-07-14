@@ -44,6 +44,9 @@ export function EmojiButton({
       <PopoverContent container={container} className="w-fit p-0">
         <EmojiPicker.Root
           locale="ru"
+          // Данные эмодзи раздаём локально (public/emojibase) — иначе frimousse
+          // тянет их с внешнего CDN, что виснет на «Загрузка…» офлайн/в PWA.
+          emojibaseUrl={`${import.meta.env.BASE_URL}emojibase`}
           onEmojiSelect={({ emoji }) => {
             onSelect(emoji)
             setOpen(false)

@@ -31,7 +31,10 @@ export default defineConfig({
       injectRegister: "auto",
       includeAssets: ["favicon.svg"],
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,svg,woff2}"],
+        // emojibase/**/*.json — локальные данные эмодзи, чтобы пикер работал офлайн.
+        globPatterns: ["**/*.{js,css,html,svg,woff2}", "emojibase/**/*.json"],
+        // data.json ~0.9 МБ — поднимаем лимит прекэша под него.
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
       },
       devOptions: {
         enabled: true,
