@@ -8,6 +8,7 @@ import { AchievementsPage } from "@/pages/achievements"
 import { SettingsPage } from "@/pages/settings"
 import { AppSidebar } from "@/widgets/app-sidebar"
 import { ImportGate } from "@/features/transfer-habits"
+import { OnboardingGate } from "@/features/onboarding"
 import { SidebarInset } from "@/shared/ui/sidebar"
 import { Toaster } from "@/shared/ui/sonner"
 import { IndexProvider } from "./providers"
@@ -46,6 +47,7 @@ export function App() {
       </SidebarInset>
       <Toaster />
       <ImportGate />
+      <OnboardingGate />
     </IndexProvider>
   )
 }
